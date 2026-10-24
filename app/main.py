@@ -59,8 +59,9 @@ app.include_router(market.router)
 
 
 @app.get("/health")
+@app.get("/api/health")
 def health():
-    """Health check endpoint for DigitalOcean App Platform and monitoring."""
+    """Health check endpoint for DigitalOcean App Platform, Vercel, and monitoring."""
     db_type = "postgresql" if "postgresql" in settings.database_url else "sqlite"
     return {
         "status": "healthy",
@@ -74,9 +75,15 @@ def health():
 
 
 @app.get("/")
+@app.get("/api")
+@app.get("/api/index.py")
 def index():
     """Serve KilimoGuard farmer dashboard."""
-    index_file = STATIC_DIR / "index.html"
-    if index_file.exists():
-        return FileResponse(index_file)
+    for path in [
+        STATIC_DIR / "index.html",
+        STATIC_DIR.parent.parent / "public" / "index.html",
+    ]:
+        if path.exists():
+            return FileResponse(path)
     return {"message": "KilimoGuard API is running. Web frontend loading..."}
+
