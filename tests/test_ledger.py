@@ -93,3 +93,59 @@ def test_ledger_transactions_and_summary(client):
     summary_after_del = client.get(f"/api/ledger/summary?farmer_id={farmer_id}").json()
     assert summary_after_del["total_expense_kes"] == 0.0
     assert summary_after_del["net_profit_kes"] == 35000.0
+
+
+def test_generate_trust_index(client):
+    from unittest.mock import patch
+    from app.services.gemma import Answer
+
+    # Create farmer with multiple crops & SACCO
+    create_res = client.post(
+        "/api/farmer/profile",
+        json={
+            "name": "David Koech",
+            "phone": "0722001122",
+            "county": "Kericho",
+            "sub_county": "Bureti",
+            "primary_crop": "Tea",
+            "crops": ["Tea", "Maize", "Dairy"],
+            "farm_size_acres": 4.5,
+            "is_sacco_member": "yes",
+            "sacco_name": "Bomet Tea Farmers SACCO",
+            "sacco_member_id": "BT-8890",
+        },
+    )
+    farmer_id = create_res.json()["id"]
+
+    mock_trust_data = {
+        "score": 755,
+        "grade": "A",
+        "risk_level": "Low Risk",
+        "max_recommended_credit_kes": 180000.0,
+        "repayment_capacity": "Strong",
+        "financial_health_summary": "Excellent operational track record with verified SACCO membership and strong tea cash flows.",
+        "key_strengths": ["Active member of Bomet Tea Farmers SACCO", "Diversified crop mix (Tea, Maize, Dairy)", "4.5 Acre commercial scale"],
+        "risk_factors": ["Vulnerability to dry season tea flush drops"],
+        "recommendations_for_sacco": "Approved for up to KES 180,000 seasonal input financing.",
+        "agronomic_resilience": "High resilience through multi-enterprise farm setup."
+    }
+    mock_ans = Answer(text="raw json", model="gemma-4-26b-a4b-it", attempts=1)
+
+    with patch("app.routes.auth.ask_gemma_json", return_value=(mock_trust_data, mock_ans)):
+        res = client.post(f"/api/farmer/{farmer_id}/trust-index")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["score"] == 755
+        assert data["grade"] == "A"
+        assert data["risk_level"] == "Low Risk"
+        assert data["max_recommended_credit_kes"] == 180000.0
+        assert "Bomet Tea Farmers SACCO" in data["key_strengths"][0]
+
+    # Verify cached retrieval via GET
+    get_res = client.get(f"/api/farmer/{farmer_id}/trust-index")
+    assert get_res.status_code == 200
+    cached = get_res.json()
+    assert cached["has_score"] is True
+    assert cached["score"] == 755
+    assert cached["grade"] == "A"
+

@@ -33,7 +33,9 @@ class Settings:
     do_spaces_endpoint: str = os.getenv("DO_SPACES_ENDPOINT", "https://nyc3.digitaloceanspaces.com")
 
     # Storage & directories
-    uploads_dir: Path = BASE_DIR / "uploads"
+    uploads_dir: Path = (
+        Path("/tmp/uploads") if os.getenv("VERCEL") else BASE_DIR / "uploads"
+    )
     port: int = int(os.getenv("PORT", "8000"))
     host: str = os.getenv("HOST", "0.0.0.0")
 
@@ -44,9 +46,11 @@ class Settings:
 
     @property
     def normalized_database_url(self) -> str:
-        """Normalize database URL for SQLAlchemy compatibility (e.g. postgres:// -> postgresql://)."""
+        """Normalize database URL for SQLAlchemy compatibility with Vercel serverless fallback."""
         url = self.database_url
         if not url:
+            if os.getenv("VERCEL"):
+                return "sqlite:////tmp/kilimoguard.db"
             return "sqlite:///./kilimoguard.db"
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql://", 1)

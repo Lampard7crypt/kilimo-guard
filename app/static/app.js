@@ -1,43 +1,236 @@
 // KilimoGuard Client Application
 
-let currentFarmer = {
-  id: 1,
-  name: "Peter Mwangi",
-  phone: "0712345678",
-  county: "Nakuru",
-  primary_crop: "Maize",
-};
+let currentFarmer = null;
 
+const DEFAULT_CROPS_LIST = [
+  "Maize",
+  "Irish Potatoes",
+  "Tomatoes",
+  "French Beans",
+  "Dry Beans",
+  "Cabbages",
+  "Hass Avocados",
+  "Bananas",
+  "Tea",
+  "Coffee",
+  "Sukuma Wiki",
+  "Wheat",
+  "Dairy Cattle",
+  "Sorghum",
+];
+
+let selectedCrops = new Set(["Maize", "Irish Potatoes"]);
 let diseaseSelectedFile = null;
 let receiptSelectedFile = null;
 let speechRecognition = null;
 let isRecording = false;
 let allMarketPrices = [];
 
-// Initialize application on DOM load
+// App Startup
 document.addEventListener("DOMContentLoaded", async () => {
-  loadFarmerFromStorage();
+  renderCropChips();
   await loadCounties();
-  await registerOrLoginFarmer();
-  loadDashboardData();
-  loadMarketPrices();
+  initFarmerState();
   initSpeechRecognition();
 });
 
-// Storage & Farmer Profile
-function loadFarmerFromStorage() {
+// Render Multi-Crop Selection Chips
+function renderCropChips() {
+  const container = document.getElementById("cropChipsContainer");
+  if (!container) return;
+  container.innerHTML = "";
+
+  DEFAULT_CROPS_LIST.forEach((crop) => {
+    const isSelected = selectedCrops.has(crop);
+    const chip = document.createElement("div");
+    chip.className = `crop-chip ${isSelected ? "selected" : ""}`;
+    chip.onclick = () => toggleCropChip(crop);
+
+    const checkIcon = isSelected
+      ? `<svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`
+      : `<svg class="icon icon-sm" viewBox="0 0 24 24" style="opacity:0.4;"><circle cx="12" cy="12" r="9"/></svg>`;
+
+    chip.innerHTML = `${checkIcon} <span>${crop}</span>`;
+    container.appendChild(chip);
+  });
+}
+
+function toggleCropChip(crop) {
+  if (selectedCrops.has(crop)) {
+    if (selectedCrops.size > 1) {
+      selectedCrops.delete(crop);
+    }
+  } else {
+    selectedCrops.add(crop);
+  }
+  renderCropChips();
+}
+
+function handleCustomCropKeydown(e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    const val = e.target.value.trim();
+    if (val && !selectedCrops.has(val)) {
+      if (!DEFAULT_CROPS_LIST.includes(val)) {
+        DEFAULT_CROPS_LIST.push(val);
+      }
+      selectedCrops.add(val);
+      e.target.value = "";
+      renderCropChips();
+    }
+  }
+}
+
+// SACCO Form Controls
+function toggleSaccoFields(checked) {
+  const box = document.getElementById("saccoFieldsBox");
+  if (box) {
+    box.style.display = checked ? "block" : "none";
+  }
+}
+
+function handleSaccoSelectChange(select) {
+  const customInput = document.getElementById("signupCustomSacco");
+  if (select.value === "custom") {
+    customInput.style.display = "block";
+    customInput.required = true;
+  } else {
+    customInput.style.display = "none";
+    customInput.required = false;
+  }
+}
+
+// Counties Loader
+async function loadCounties() {
+  try {
+    const res = await fetch("/api/counties");
+    const counties = await res.json();
+
+    const signupSelect = document.getElementById("signupCounty");
+    const profileSelect = document.getElementById("profileCounty");
+
+    [signupSelect, profileSelect].forEach((select) => {
+      if (!select) return;
+      select.innerHTML = "";
+      counties.forEach((c) => {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.innerText = c;
+        select.appendChild(opt);
+      });
+    });
+
+    if (signupSelect) signupSelect.value = "Nakuru";
+  } catch (err) {
+    console.error("Failed loading counties:", err);
+  }
+}
+
+// Initialize Farmer Profile State
+function initFarmerState() {
   const saved = localStorage.getItem("kilimoguard_farmer");
   if (saved) {
     try {
       currentFarmer = JSON.parse(saved);
     } catch (e) {
-      console.warn("Could not parse saved farmer profile:", e);
+      console.warn("Invalid saved farmer profile:", e);
     }
   }
-  updateFarmerUI();
+
+  if (currentFarmer && currentFarmer.id) {
+    showAppView();
+    updateFarmerUI();
+    loadDashboardData();
+    loadMarketPrices();
+    loadTrustIndex();
+  } else {
+    showSignupView();
+  }
 }
 
+function showSignupView() {
+  document.getElementById("viewSignup").classList.add("active");
+  document.getElementById("viewApp").classList.remove("active");
+  document.getElementById("farmerBadgeName").innerText = "New Farmer";
+  document.getElementById("farmerBadgeCounty").innerText = "Sign Up";
+}
+
+function showAppView() {
+  document.getElementById("viewSignup").classList.remove("active");
+  document.getElementById("viewApp").classList.add("active");
+}
+
+function openSignupView() {
+  closeProfileModal();
+  showSignupView();
+}
+
+// Handle Sign-Up Form Submit
+async function handleSignupSubmit(e) {
+  e.preventDefault();
+
+  const name = document.getElementById("signupName").value.trim();
+  const phone = document.getElementById("signupPhone").value.trim();
+  const county = document.getElementById("signupCounty").value;
+  const subCounty = document.getElementById("signupSubCounty").value.trim();
+  const acreage = parseFloat(document.getElementById("signupAcreage").value) || 1.0;
+
+  const isSacco = document.getElementById("signupSaccoToggle").checked;
+  let saccoName = null;
+  let saccoId = null;
+
+  if (isSacco) {
+    const selectVal = document.getElementById("signupSaccoSelect").value;
+    saccoName = selectVal === "custom"
+      ? document.getElementById("signupCustomSacco").value.trim()
+      : selectVal;
+    saccoId = document.getElementById("signupSaccoId").value.trim();
+  }
+
+  const cropsArr = Array.from(selectedCrops);
+
+  const payload = {
+    name,
+    phone,
+    county,
+    sub_county: subCounty,
+    primary_crop: cropsArr[0] || "Maize",
+    crops: cropsArr,
+    farm_size_acres: acreage,
+    is_sacco_member: isSacco ? "yes" : "no",
+    sacco_name: saccoName,
+    sacco_member_id: saccoId,
+  };
+
+  try {
+    const res = await fetch("/api/farmer/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      currentFarmer = await res.json();
+      localStorage.setItem("kilimoguard_farmer", JSON.stringify(currentFarmer));
+      showAppView();
+      updateFarmerUI();
+      loadDashboardData();
+      loadMarketPrices();
+      // Auto-trigger trust index calculation on new registration
+      runGenerateTrustIndex();
+    } else {
+      const err = await res.json();
+      alert("Registration failed: " + (err.detail || "Check input details."));
+    }
+  } catch (err) {
+    alert("Network error: " + err.message);
+  }
+}
+
+// Update UI Badges & Profile Modal
 function updateFarmerUI() {
+  if (!currentFarmer) return;
+
   document.getElementById("farmerBadgeName").innerText = currentFarmer.name || "Mkulima";
   document.getElementById("farmerBadgeCounty").innerText = currentFarmer.county || "Nakuru";
   document.getElementById("dashWeatherCounty").innerText = currentFarmer.county || "Nakuru";
@@ -45,61 +238,23 @@ function updateFarmerUI() {
 
   document.getElementById("profileName").value = currentFarmer.name || "";
   document.getElementById("profilePhone").value = currentFarmer.phone || "";
-  document.getElementById("profileCounty").value = currentFarmer.county || "Nakuru";
-  document.getElementById("profileCrop").value = currentFarmer.primary_crop || "";
-}
-
-async function loadCounties() {
-  try {
-    const res = await fetch("/api/counties");
-    const counties = await res.json();
-    const select = document.getElementById("profileCounty");
-    select.innerHTML = "";
-    counties.forEach((c) => {
-      const opt = document.createElement("option");
-      opt.value = c;
-      opt.innerText = c;
-      select.appendChild(opt);
-    });
-    if (currentFarmer.county) {
-      select.value = currentFarmer.county;
-    }
-  } catch (err) {
-    console.error("Error loading counties:", err);
+  if (currentFarmer.county) {
+    document.getElementById("profileCounty").value = currentFarmer.county;
   }
-}
+  document.getElementById("profileSubCounty").value = currentFarmer.sub_county || "";
+  document.getElementById("profileAcreage").value = currentFarmer.farm_size_acres || 1.0;
+  document.getElementById("profileCrops").value = Array.isArray(currentFarmer.crops)
+    ? currentFarmer.crops.join(", ")
+    : (currentFarmer.crops || currentFarmer.primary_crop || "");
 
-async function registerOrLoginFarmer() {
-  try {
-    const res = await fetch("/api/farmer/profile", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(currentFarmer),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      currentFarmer.id = data.id;
-      localStorage.setItem("kilimoguard_farmer", JSON.stringify(currentFarmer));
-      updateFarmerUI();
-    }
-  } catch (err) {
-    console.error("Farmer login/sync failed:", err);
-  }
-}
-
-async function saveProfile(e) {
-  e.preventDefault();
-  currentFarmer.name = document.getElementById("profileName").value.trim();
-  currentFarmer.phone = document.getElementById("profilePhone").value.trim();
-  currentFarmer.county = document.getElementById("profileCounty").value;
-  currentFarmer.primary_crop = document.getElementById("profileCrop").value.trim();
-
-  await registerOrLoginFarmer();
-  closeProfileModal();
-  loadDashboardData();
+  const saccoText = currentFarmer.is_sacco_member === "yes"
+    ? `${currentFarmer.sacco_name || "SACCO Member"} (ID: ${currentFarmer.sacco_member_id || "Verified"})`
+    : "Not affiliated";
+  document.getElementById("profileSacco").value = saccoText;
 }
 
 function openProfileModal() {
+  updateFarmerUI();
   document.getElementById("profileModal").classList.add("active");
 }
 
@@ -107,9 +262,48 @@ function closeProfileModal() {
   document.getElementById("profileModal").classList.remove("active");
 }
 
+async function saveProfileModal(e) {
+  e.preventDefault();
+  if (!currentFarmer) return;
+
+  const cropsStr = document.getElementById("profileCrops").value.trim();
+  const cropsArr = cropsStr ? cropsStr.split(",").map((c) => c.trim()).filter(Boolean) : [currentFarmer.primary_crop];
+
+  const payload = {
+    name: document.getElementById("profileName").value.trim(),
+    phone: document.getElementById("profilePhone").value.trim(),
+    county: document.getElementById("profileCounty").value,
+    sub_county: document.getElementById("profileSubCounty").value.trim(),
+    farm_size_acres: parseFloat(document.getElementById("profileAcreage").value) || 1.0,
+    primary_crop: cropsArr[0] || "Maize",
+    crops: cropsArr,
+    is_sacco_member: currentFarmer.is_sacco_member || "no",
+    sacco_name: currentFarmer.sacco_name,
+    sacco_member_id: currentFarmer.sacco_member_id,
+  };
+
+  try {
+    const res = await fetch("/api/farmer/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      currentFarmer = await res.json();
+      localStorage.setItem("kilimoguard_farmer", JSON.stringify(currentFarmer));
+      updateFarmerUI();
+      closeProfileModal();
+      loadDashboardData();
+    }
+  } catch (err) {
+    alert("Update failed: " + err.message);
+  }
+}
+
 // Tab Switching
 function switchTab(tabId) {
-  const tabs = ["dashboard", "disease", "chat", "receipts", "ledger", "market"];
+  const tabs = ["dashboard", "trust", "disease", "chat", "receipts", "ledger", "market"];
   tabs.forEach((t) => {
     const panel = document.getElementById(`panel${t.charAt(0).toUpperCase() + t.slice(1)}`);
     const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
@@ -123,6 +317,7 @@ function switchTab(tabId) {
   if (targetBtn) targetBtn.classList.add("active");
 
   if (tabId === "dashboard") loadDashboardData();
+  if (tabId === "trust") loadTrustIndex();
   if (tabId === "ledger") loadLedgerTransactions();
   if (tabId === "market") loadMarketPrices();
 }
@@ -131,9 +326,11 @@ function switchTab(tabId) {
 async function loadDashboardData() {
   loadLedgerSummary();
   loadWeather();
+  loadTrustIndex();
 }
 
 async function loadLedgerSummary() {
+  if (!currentFarmer) return;
   try {
     const res = await fetch(`/api/ledger/summary?farmer_id=${currentFarmer.id}`);
     if (res.ok) {
@@ -145,12 +342,12 @@ async function loadLedgerSummary() {
       profitEl.style.color = data.net_profit_kes >= 0 ? "var(--success)" : "var(--danger)";
     }
   } catch (err) {
-    console.error("Failed to load ledger summary:", err);
+    console.error("Failed loading ledger summary:", err);
   }
 }
 
 async function loadWeather() {
-  const county = currentFarmer.county || "Nakuru";
+  const county = currentFarmer ? currentFarmer.county : "Nakuru";
   document.getElementById("dashWeatherCounty").innerText = county;
   try {
     const res = await fetch(`/api/weather?county=${encodeURIComponent(county)}`);
@@ -164,11 +361,109 @@ async function loadWeather() {
       document.getElementById("dashWeatherAdvisory").innerText = w.advisory;
     }
   } catch (err) {
-    console.error("Failed to load weather:", err);
+    console.error("Failed loading weather:", err);
   }
 }
 
-// Speech Recognition & Voice Capabilities
+// Kilimo-Trust-Index (Credit Rating via Gemma)
+async function loadTrustIndex() {
+  if (!currentFarmer) return;
+  try {
+    const res = await fetch(`/api/farmer/${currentFarmer.id}/trust-index`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.has_score) {
+        renderTrustIndexUI(data);
+      }
+    }
+  } catch (err) {
+    console.error("Failed loading trust index:", err);
+  }
+}
+
+async function runGenerateTrustIndex() {
+  if (!currentFarmer) return;
+
+  const btn = document.getElementById("calcTrustBtn");
+  const btnText = document.getElementById("calcTrustBtnText");
+  btn.disabled = true;
+  btnText.innerHTML = `<span class="spinner"></span> Assessing with Gemma AI...`;
+
+  try {
+    const res = await fetch(`/api/farmer/${currentFarmer.id}/trust-index`, {
+      method: "POST",
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      alert("Trust index assessment failed: " + (err.detail || "Unable to complete."));
+      return;
+    }
+
+    const data = await res.json();
+    renderTrustIndexUI(data);
+  } catch (err) {
+    alert("Network error: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btnText.innerText = "Recalculate Trust Index with Gemma";
+  }
+}
+
+function renderTrustIndexUI(data) {
+  document.getElementById("trustEmptyPrompt").style.display = "none";
+  document.getElementById("trustReportContainer").style.display = "block";
+
+  // Score & Grade
+  const score = data.score || 650;
+  const grade = data.grade || "BBB";
+  const risk = data.risk_level || "Moderate Risk";
+  const maxCredit = data.max_recommended_credit_kes || 50000;
+
+  document.getElementById("trustScoreVal").innerText = score;
+  document.getElementById("trustGradeVal").innerText = `Grade ${grade}`;
+  document.getElementById("trustRiskPill").innerText = risk;
+
+  document.getElementById("trustMaxCreditVal").innerText = `KES ${maxCredit.toLocaleString()}`;
+  document.getElementById("trustRepaymentVal").innerText = `Repayment Capacity: ${data.repayment_capacity || "Adequate"}`;
+
+  // Dashboard widget sync
+  document.getElementById("dashTrustScore").innerText = `${score} (${grade})`;
+  document.getElementById("dashTrustStatus").innerText = risk;
+
+  // Breakdown cards
+  document.getElementById("trustExecSummary").innerText = data.financial_health_summary || "Healthy farm cash flow record.";
+  document.getElementById("trustAgronomicResilience").innerText = data.agronomic_resilience ? `Agronomic Analysis: ${data.agronomic_resilience}` : "";
+  document.getElementById("trustSaccoNote").innerText = data.recommendations_for_sacco || "Standard input voucher advance approved.";
+  document.getElementById("trustTimestampMeta").innerText = `Verified by KilimoGuard AI · Updated ${data.updated_at || "Today"}`;
+
+  // Strengths list
+  const strengthsUl = document.getElementById("trustStrengthsList");
+  strengthsUl.innerHTML = "";
+  (data.key_strengths || []).forEach((s) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>${s}</span>`;
+    strengthsUl.appendChild(li);
+  });
+
+  // Risks list
+  const risksUl = document.getElementById("trustRisksList");
+  risksUl.innerHTML = "";
+  (data.risk_factors || []).forEach((r) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>${r}</span>`;
+    risksUl.appendChild(li);
+  });
+
+  // Voucher details
+  document.getElementById("voucherFarmerName").innerText = currentFarmer.name;
+  document.getElementById("voucherCounty").innerText = currentFarmer.county;
+  document.getElementById("voucherSacco").innerText = currentFarmer.is_sacco_member === "yes" ? (currentFarmer.sacco_name || "SACCO Member") : "Direct Smallholder";
+  document.getElementById("voucherGrade").innerText = `Grade ${grade} (${score}/850) · ${risk}`;
+  document.getElementById("voucherCredit").innerText = `KES ${maxCredit.toLocaleString()}`;
+}
+
+// Voice Capabilities & Web Speech API
 function initSpeechRecognition() {
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRec) {
@@ -179,32 +474,23 @@ function initSpeechRecognition() {
   speechRecognition = new SpeechRec();
   speechRecognition.continuous = false;
   speechRecognition.interimResults = false;
-  // Swahili Kenya or English Kenya
   speechRecognition.lang = "sw-KE";
 
   speechRecognition.onstart = () => {
     isRecording = true;
     const btn = document.getElementById("voiceMicBtn");
-    btn.classList.add("recording");
-    btn.title = "Listening to your voice... Speak now";
+    if (btn) btn.classList.add("recording");
   };
 
   speechRecognition.onresult = (event) => {
     const transcript = event.results[0][0].transcript;
     const input = document.getElementById("chatTextInput");
     input.value = transcript;
-    // Auto-send voice input
     sendChatMessage();
   };
 
-  speechRecognition.onerror = (event) => {
-    console.warn("Speech recognition error:", event.error);
-    stopVoiceInput();
-  };
-
-  speechRecognition.onend = () => {
-    stopVoiceInput();
-  };
+  speechRecognition.onerror = () => stopVoiceInput();
+  speechRecognition.onend = () => stopVoiceInput();
 }
 
 function toggleVoiceInput() {
@@ -226,10 +512,7 @@ function toggleVoiceInput() {
 function stopVoiceInput() {
   isRecording = false;
   const btn = document.getElementById("voiceMicBtn");
-  if (btn) {
-    btn.classList.remove("recording");
-    btn.title = "Click to speak (English or Swahili)";
-  }
+  if (btn) btn.classList.remove("recording");
 }
 
 function speakDiagnosis() {
@@ -260,13 +543,12 @@ function handleChatKeyPress(event) {
 async function sendChatMessage() {
   const input = document.getElementById("chatTextInput");
   const message = input.value.trim();
-  if (!message) return;
+  if (!message || !currentFarmer) return;
 
   input.value = "";
   appendChatBubble("user", message);
 
-  // Bot loading placeholder
-  const loadingBubble = appendChatBubble("bot", "Thinking with Gemma... 🍃");
+  const loadingBubble = appendChatBubble("bot", "Analyzing transaction with Gemma AI...");
 
   const formData = new FormData();
   formData.append("message", message);
@@ -293,7 +575,7 @@ async function sendChatMessage() {
     }
   } catch (err) {
     loadingBubble.remove();
-    appendChatBubble("bot", "Pole! Network failure. Please check your internet connection.");
+    appendChatBubble("bot", "Network connection error. Please verify your internet connection.");
   }
 }
 
@@ -319,7 +601,7 @@ function renderChatPendingSale(draft, marketEval) {
   box.innerHTML = `
     <div class="confirmation-card">
       <div class="confirmation-header">
-        <span>Draft Sale Detected</span>
+        <span>Draft Sale Extracted</span>
         <span>${draft.category}</span>
       </div>
       <div class="confirmation-details">
@@ -331,7 +613,8 @@ function renderChatPendingSale(draft, marketEval) {
         ${marketTagHtml}
       </div>
       <button class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" onclick='acceptDraftTransaction(${JSON.stringify(draft).replace(/'/g, "&apos;")})'>
-        ✓ Accept & Add to Ledger
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>Accept & Record to Digital Ledger</span>
       </button>
     </div>
   `;
@@ -350,9 +633,11 @@ async function acceptDraftTransaction(draft) {
       const data = await res.json();
       document.getElementById("chatPendingCardBox").innerHTML = `
         <div style="text-align: center; padding: 2rem 1rem; color: var(--success);">
-          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎉</div>
+          <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">
+            <svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
           <h3>${data.message}</h3>
-          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem;">Transaction #${data.transaction_id} is now saved in your digital ledger.</p>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem;">Transaction #${data.transaction_id} is permanently saved in your digital ledger.</p>
         </div>
       `;
       loadLedgerSummary();
@@ -389,7 +674,7 @@ function clearDiseasePreview(e) {
 }
 
 async function runDiseaseScan() {
-  if (!diseaseSelectedFile) return;
+  if (!diseaseSelectedFile || !currentFarmer) return;
 
   const btn = document.getElementById("diseaseScanBtn");
   btn.disabled = true;
@@ -419,7 +704,7 @@ async function runDiseaseScan() {
     alert("Network error: " + err.message);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = `<span>🔬</span> Diagnose Crop with Gemma`;
+    btn.innerHTML = `<svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>Diagnose Crop with Gemma</span>`;
   }
 }
 
@@ -464,7 +749,7 @@ function clearReceiptPreview(e) {
 }
 
 async function runReceiptScan() {
-  if (!receiptSelectedFile) return;
+  if (!receiptSelectedFile || !currentFarmer) return;
 
   const btn = document.getElementById("receiptScanBtn");
   btn.disabled = true;
@@ -492,7 +777,7 @@ async function runReceiptScan() {
     alert("Network error: " + err.message);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = `<span>⚡</span> Audit & Extract Receipt with Gemma`;
+    btn.innerHTML = `<svg class="icon icon-sm" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>Audit & Extract Receipt with Gemma</span>`;
   }
 }
 
@@ -509,11 +794,12 @@ function renderReceiptConfirmation(draft) {
         <div><strong>Item:</strong> ${draft.commodity}</div>
         <div><strong>Quantity:</strong> ${draft.quantity} ${draft.unit}</div>
         <div><strong>Unit Price:</strong> KES ${draft.unit_price.toLocaleString()}</div>
-        <div style="grid-column: span 2;"><strong>Total Paid:</strong> <span style="color:var(--danger); font-weight:800;">KES ${draft.total_amount.toLocaleString()}</span></div>
+        <div style="grid-column: span 2;"><strong>Total Cost:</strong> <span style="color:var(--danger); font-weight:800;">KES ${draft.total_amount.toLocaleString()}</span></div>
         <div style="grid-column: span 2; font-size: 0.8rem; color: var(--text-muted);">${draft.summary}</div>
       </div>
       <button class="btn btn-primary" style="width: 100%; margin-top: 0.75rem;" onclick='acceptDraftTransaction(${JSON.stringify(draft).replace(/'/g, "&apos;")})'>
-        ✓ Accept & Record Expense to Ledger
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>Accept & Record Expense to Ledger</span>
       </button>
     </div>
   `;
@@ -521,6 +807,8 @@ function renderReceiptConfirmation(draft) {
 
 // Digital Ledger Table
 async function loadLedgerTransactions() {
+  if (!currentFarmer) return;
+
   const filterType = document.getElementById("ledgerFilterType").value;
   let url = `/api/ledger/transactions?farmer_id=${currentFarmer.id}`;
   if (filterType) url += `&transaction_type=${filterType}`;
@@ -534,7 +822,7 @@ async function loadLedgerTransactions() {
     const transactions = await res.json();
 
     if (transactions.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 2rem;">No transactions found. Log a sale via chat or scan a receipt!</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 2rem;">No transactions recorded yet. Log a produce sale or scan an agrovet receipt.</td></tr>`;
       return;
     }
 
@@ -569,7 +857,7 @@ async function loadLedgerTransactions() {
       )
       .join("");
   } catch (err) {
-    console.error("Failed to load transactions:", err);
+    console.error("Failed loading transactions:", err);
   }
 }
 
@@ -603,7 +891,7 @@ async function loadMarketPrices() {
 function renderMarketTable(prices) {
   const tbody = document.getElementById("marketTableBody");
   if (prices.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No matching commodity prices.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No matching commodity benchmarks.</td></tr>`;
     return;
   }
 
@@ -640,7 +928,7 @@ async function runPriceCompare() {
 
   const resultBox = document.getElementById("compareResultBox");
   resultBox.style.display = "block";
-  resultBox.innerHTML = `Calculating against wholesale market benchmark...`;
+  resultBox.innerHTML = `Calculating variance against wholesale market benchmark...`;
 
   try {
     const res = await fetch("/api/market/compare", {
@@ -650,7 +938,7 @@ async function runPriceCompare() {
         commodity: commodity,
         unit_price: price,
         unit: unit,
-        county: currentFarmer.county,
+        county: currentFarmer ? currentFarmer.county : "Nakuru",
       }),
     });
 

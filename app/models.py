@@ -15,7 +15,23 @@ class Farmer(Base):
     name = Column(String(120), nullable=False)
     phone = Column(String(50), unique=True, index=True, nullable=False)
     county = Column(String(80), nullable=False, default="Nakuru")
+    sub_county = Column(String(100), default="")
     primary_crop = Column(String(100), default="Maize")
+    crops = Column(String(300), default="Maize")
+    farm_size_acres = Column(Float, default=1.0)
+    is_sacco_member = Column(String(10), default="no")
+    sacco_name = Column(String(150), nullable=True)
+    sacco_member_id = Column(String(100), nullable=True)
+
+    # Kilimo-Trust-Index (Credit & Operational Health Rating)
+    trust_index_score = Column(Integer, nullable=True)
+    trust_index_grade = Column(String(10), nullable=True)
+    trust_index_risk = Column(String(40), nullable=True)
+    trust_index_max_credit = Column(Float, nullable=True)
+    trust_index_summary = Column(Text, nullable=True)
+    trust_index_details_json = Column(Text, nullable=True)
+    trust_index_updated_at = Column(DateTime, nullable=True)
+
     created_at = Column(DateTime, default=utc_now)
 
     scans = relationship("DiseaseScan", back_populates="farmer", cascade="all, delete-orphan")
