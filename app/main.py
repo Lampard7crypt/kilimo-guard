@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import Base, SessionLocal, engine
-from app.routes import auth, chat, ledger, market, scan, weather
+from app.routes import auth, chat, growth, ledger, market, scan, weather
 from app.services.market import seed_market_prices
 
 logging.basicConfig(
@@ -51,11 +51,13 @@ app.mount("/uploads", StaticFiles(directory=settings.uploads_dir), name="uploads
 
 # Include API Routers
 app.include_router(auth.router)
+app.include_router(growth.router)
 app.include_router(scan.router)
 app.include_router(ledger.router)
 app.include_router(chat.router)
 app.include_router(weather.router)
 app.include_router(market.router)
+
 
 
 @app.get("/health")

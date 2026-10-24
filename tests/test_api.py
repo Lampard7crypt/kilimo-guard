@@ -74,3 +74,45 @@ def test_weather_advisory(client):
     assert "advisory" in data
     assert "spraying_suitability" in data
     assert "fungal_risk" in data
+    assert "seasonal_outlook" in data
+    assert "season_title" in data["seasonal_outlook"]
+    assert len(data["seasonal_outlook"]["months"]) == 3
+
+
+def test_crop_growth_batches(client, db_session):
+    from app.models import Farmer
+    farmer = Farmer(name="David Test", phone="0799887766", county="Nakuru", primary_crop="Maize")
+    db_session.add(farmer)
+    db_session.commit()
+
+
+    # Create crop batch
+    batch_res = client.post("/api/growth/batch", json={
+        "farmer_id": farmer.id,
+        "name": "North Field Maize Plot A",
+        "crop": "Maize (DK 777)",
+        "variety": "DK 777",
+        "acreage": 3.0,
+        "planting_date": "2026-09-15"
+    })
+    assert batch_res.status_code == 200
+    batch_data = batch_res.json()
+    assert batch_data["name"] == "North Field Maize Plot A"
+    assert batch_data["status"] == "active"
+    batch_id = batch_data["id"]
+
+    # List crop batches
+    list_res = client.get(f"/api/growth/batches?farmer_id={farmer.id}")
+    assert list_res.status_code == 200
+    batches = list_res.json()
+    assert len(batches) == 1
+    assert batches[0]["id"] == batch_id
+    assert batches[0]["crop"] == "Maize (DK 777)"
+
+    # Get batch timeline
+    timeline_res = client.get(f"/api/growth/batch/{batch_id}")
+    assert timeline_res.status_code == 200
+    timeline = timeline_res.json()
+    assert timeline["id"] == batch_id
+    assert isinstance(timeline["timeline"], list)
+

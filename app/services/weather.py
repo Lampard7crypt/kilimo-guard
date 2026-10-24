@@ -37,22 +37,96 @@ def get_weather_advisory(temp: float, humidity: float, rain_prob: int, wind_spee
     advice_items = []
 
     if wind_speed > 18:
-        advice_items.append("💨 High winds (>18 km/h): Avoid spraying pesticides or foliage feed to prevent chemical drift.")
+        advice_items.append("High winds (>18 km/h): Avoid spraying pesticides or foliage feed to prevent chemical drift.")
     elif rain_prob < 30 and wind_speed < 12:
-        advice_items.append("🎯 Optimal window for foliar spraying and agrochemical applications.")
+        advice_items.append("Optimal window for foliar spraying and agrochemical applications.")
 
     if rain_prob > 60:
-        advice_items.append("🌧️ Rain expected: Delay top-dressing fertilizer (e.g. CAN/Urea) to minimize nutrient leaching.")
+        advice_items.append("Rain expected: Delay top-dressing fertilizer (e.g. CAN/Urea) to minimize nutrient leaching.")
     elif rain_prob < 20 and temp > 24:
-        advice_items.append("☀️ Dry conditions: Excellent window for weeding, solarization, and field drying of harvested grain.")
+        advice_items.append("Dry conditions: Excellent window for weeding, solarization, and field drying of harvested grain.")
 
     if humidity > 80:
-        advice_items.append("🍄 High humidity alert: Elevated risk for fungal blight and powdery mildew. Monitor tomato and potato canopies.")
+        advice_items.append("High humidity alert: Elevated risk for fungal blight and powdery mildew. Monitor tomato and potato canopies.")
 
     return {
         "summary": " ".join(advice_items) if advice_items else "Standard conditions: Continue regular farm management and crop scouting.",
         "spraying_suitability": "Good" if wind_speed <= 15 and rain_prob <= 35 else "Poor (Risk of drift or rain wash)",
         "fungal_risk": "High" if humidity >= 80 else ("Moderate" if humidity >= 65 else "Low"),
+    }
+
+
+def get_seasonal_climate_outlook(county: str = "Nakuru") -> Dict[str, Any]:
+    """Generate multi-month seasonal agro-climatic projection for Kenyan counties."""
+    import datetime
+
+    today = datetime.date.today()
+    month = today.month
+
+    # Kenyan agro-ecological calendar mapping
+    month_names = ["January", "February", "March", "April", "May", "June",
+                   "July", "August", "September", "October", "November", "December"]
+
+    # Determine seasonal cycle
+    if month in (3, 4, 5):
+        season_title = "Long Rains (MAM) Main Cropping Cycle"
+        season_phase = "Active Vegetative & Reproductive Phase"
+        soil_moisture = "82% (High Saturation)"
+        climate_risk = "Moderate (Waterlogging in heavy clay soils)"
+    elif month in (6, 7, 8):
+        season_title = "Post-Rains Cool & Maturation Season"
+        season_phase = "Grain Filling, Maturation & Solar Weeding"
+        soil_moisture = "64% (Adequate Subsoil Moisture)"
+        climate_risk = "Low Risk (Favorable grain drying)"
+    elif month in (9, 10, 11, 12):
+        season_title = "Short Rains (OND) Cropping Season"
+        season_phase = "Legumes, Horticultural & Short-Cycle Grain Window"
+        soil_moisture = "74% (Optimal Field Capacity)"
+        climate_risk = "Low Risk (Reliable precipitation across Rift & Central)"
+    else:
+        season_title = "Warm Dry & Land Preparation Season"
+        season_phase = "Harvesting, Threshing & Pre-Season Land Tillage"
+        soil_moisture = "48% (Depleting Surface Moisture)"
+        climate_risk = "Elevated Moisture Stress (Irrigation advised for horticulture)"
+
+    # Build next 3 months projections
+    next_months = []
+    for offset in range(1, 4):
+        next_m_idx = (month - 1 + offset) % 12
+        m_name = month_names[next_m_idx]
+        year = today.year + ((month - 1 + offset) // 12)
+
+        if next_m_idx in (2, 3, 4):  # MAM
+            rainfall = "160 - 240 mm (High)"
+            temp_range = "14°C - 24°C"
+            task = "Planting, basal fertilizer application (DAP/NPK), and first weeding at 2-3 weeks."
+        elif next_m_idx in (5, 6, 7):  # JJA
+            rainfall = "40 - 75 mm (Low-Moderate)"
+            temp_range = "11°C - 22°C"
+            task = "Top-dressing with CAN, fungal scouting in cool mornings, and inter-row weeding."
+        elif next_m_idx in (8, 9, 10, 11):  # SOND
+            rainfall = "110 - 180 mm (Moderate)"
+            temp_range = "13°C - 25°C"
+            task = "Second crop planting (beans/potatoes), foliar booster sprays, and insect pest trapping."
+        else:  # JF
+            rainfall = "15 - 35 mm (Dry)"
+            temp_range = "15°C - 28°C"
+            task = "Deep plowing, farmyard manure incorporation, and acquiring certified hybrid seed."
+
+        next_months.append({
+            "month": f"{m_name} {year}",
+            "rainfall_expectation": rainfall,
+            "temp_range": temp_range,
+            "field_activity": task,
+        })
+
+    return {
+        "season_title": season_title,
+        "season_phase": season_phase,
+        "soil_moisture": soil_moisture,
+        "climate_risk": climate_risk,
+        "projection_window": f"{next_months[0]['month']} to {next_months[-1]['month']}",
+        "months": next_months,
     }
 
 
@@ -67,6 +141,8 @@ def get_county_weather(county: str = "Nakuru") -> Dict[str, Any]:
         "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max",
         "timezone": "Africa/Nairobi",
     }
+
+    seasonal_outlook = get_seasonal_climate_outlook(county)
 
     try:
         with httpx.Client(timeout=8.0) as client:
@@ -97,6 +173,7 @@ def get_county_weather(county: str = "Nakuru") -> Dict[str, Any]:
             "advisory": advisory["summary"],
             "spraying_suitability": advisory["spraying_suitability"],
             "fungal_risk": advisory["fungal_risk"],
+            "seasonal_outlook": seasonal_outlook,
             "is_live": True,
         }
     except Exception as exc:
@@ -113,5 +190,7 @@ def get_county_weather(county: str = "Nakuru") -> Dict[str, Any]:
             "advisory": advisory["summary"],
             "spraying_suitability": advisory["spraying_suitability"],
             "fungal_risk": advisory["fungal_risk"],
+            "seasonal_outlook": seasonal_outlook,
             "is_live": False,
         }
+

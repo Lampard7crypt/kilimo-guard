@@ -2,12 +2,13 @@ import json
 import logging
 from pathlib import Path
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import DiseaseScan, Farmer, LedgerTransaction, utc_now
 from app.services.gemma import GemmaUnavailable, ask_gemma_json
+from app.services.storage import save_upload
 from app.services.weather import KENYA_COUNTY_COORDINATES
 
 log = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ class FarmerProfileRequest(BaseModel):
     primary_crop: Optional[str] = "Maize"
     crops: Optional[List[str]] = []
     farm_size_acres: Optional[float] = 1.0
+    avatar_url: Optional[str] = None
     is_sacco_member: Optional[str] = "no"
     sacco_name: Optional[str] = None
     sacco_member_id: Optional[str] = None
@@ -53,6 +55,7 @@ class FarmerProfileResponse(BaseModel):
     primary_crop: str
     crops: List[str]
     farm_size_acres: float
+    avatar_url: Optional[str] = None
     is_sacco_member: str
     sacco_name: Optional[str] = None
     sacco_member_id: Optional[str] = None
@@ -62,6 +65,7 @@ class FarmerProfileResponse(BaseModel):
     trust_index_max_credit: Optional[float] = None
     trust_index_summary: Optional[str] = None
     trust_index_updated_at: Optional[str] = None
+
 
 
 @router.get("/counties", response_model=List[str])
@@ -100,6 +104,7 @@ def save_or_login_farmer(payload: FarmerProfileRequest, db: Session = Depends(ge
             primary_crop=primary_crop,
             crops=crops_str,
             farm_size_acres=farm_size_acres,
+            avatar_url=payload.avatar_url,
             is_sacco_member=is_sacco_member,
             sacco_name=sacco_name,
             sacco_member_id=sacco_member_id,
@@ -115,6 +120,8 @@ def save_or_login_farmer(payload: FarmerProfileRequest, db: Session = Depends(ge
         farmer.primary_crop = primary_crop
         farmer.crops = crops_str
         farmer.farm_size_acres = farm_size_acres
+        if payload.avatar_url:
+            farmer.avatar_url = payload.avatar_url
         farmer.is_sacco_member = is_sacco_member
         farmer.sacco_name = sacco_name
         farmer.sacco_member_id = sacco_member_id
@@ -132,6 +139,7 @@ def save_or_login_farmer(payload: FarmerProfileRequest, db: Session = Depends(ge
         primary_crop=farmer.primary_crop,
         crops=parsed_crops or [farmer.primary_crop],
         farm_size_acres=farmer.farm_size_acres or 1.0,
+        avatar_url=farmer.avatar_url,
         is_sacco_member=farmer.is_sacco_member or "no",
         sacco_name=farmer.sacco_name,
         sacco_member_id=farmer.sacco_member_id,
@@ -142,6 +150,39 @@ def save_or_login_farmer(payload: FarmerProfileRequest, db: Session = Depends(ge
         trust_index_summary=farmer.trust_index_summary,
         trust_index_updated_at=farmer.trust_index_updated_at.strftime("%Y-%m-%d %H:%M") if farmer.trust_index_updated_at else None,
     )
+
+
+@router.post("/farmer/{farmer_id}/avatar")
+def upload_farmer_avatar(
+    farmer_id: int,
+    photo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """Upload and set farmer profile photo stored on Spaces or local fallback."""
+    farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
+    if not farmer:
+        raise HTTPException(status_code=404, detail="Farmer not found.")
+
+    if not photo.filename:
+        raise HTTPException(status_code=400, detail="Please select a photo.")
+
+    content_type = photo.content_type or "image/jpeg"
+    file_bytes = photo.file.read(5 * 1024 * 1024 + 1)
+    if len(file_bytes) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Avatar image must be under 5MB.")
+
+    public_url, _ = save_upload(
+        file_bytes=file_bytes,
+        original_filename=photo.filename,
+        folder="avatars",
+        content_type=content_type,
+    )
+
+    farmer.avatar_url = public_url
+    db.commit()
+    db.refresh(farmer)
+
+    return {"status": "success", "avatar_url": public_url}
 
 
 @router.get("/farmer/{farmer_id}")
@@ -177,6 +218,7 @@ def get_farmer_profile(farmer_id: int, db: Session = Depends(get_db)):
         "primary_crop": farmer.primary_crop,
         "crops": parsed_crops or [farmer.primary_crop],
         "farm_size_acres": farmer.farm_size_acres or 1.0,
+        "avatar_url": farmer.avatar_url,
         "is_sacco_member": farmer.is_sacco_member or "no",
         "sacco_name": farmer.sacco_name,
         "sacco_member_id": farmer.sacco_member_id,
@@ -196,6 +238,7 @@ def get_farmer_profile(farmer_id: int, db: Session = Depends(get_db)):
             "transaction_count": len(incomes) + len(expenses),
         },
     }
+
 
 
 @router.post("/farmer/{farmer_id}/trust-index")

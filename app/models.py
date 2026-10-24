@@ -19,6 +19,7 @@ class Farmer(Base):
     primary_crop = Column(String(100), default="Maize")
     crops = Column(String(300), default="Maize")
     farm_size_acres = Column(Float, default=1.0)
+    avatar_url = Column(String(500), nullable=True)
     is_sacco_member = Column(String(10), default="no")
     sacco_name = Column(String(150), nullable=True)
     sacco_member_id = Column(String(100), nullable=True)
@@ -36,6 +37,43 @@ class Farmer(Base):
 
     scans = relationship("DiseaseScan", back_populates="farmer", cascade="all, delete-orphan")
     transactions = relationship("LedgerTransaction", back_populates="farmer", cascade="all, delete-orphan")
+    crop_batches = relationship("CropBatch", back_populates="farmer", cascade="all, delete-orphan")
+
+
+class CropBatch(Base):
+    __tablename__ = "crop_batches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farmer_id = Column(Integer, ForeignKey("farmers.id"), nullable=False)
+    name = Column(String(120), nullable=False)  # e.g., "Main Shamba - Maize Plot A"
+    crop = Column(String(100), nullable=False)  # e.g., "Maize (DK 777)"
+    variety = Column(String(100), nullable=True)
+    acreage = Column(Float, default=1.0)
+    planting_date = Column(String(30), nullable=False)  # "YYYY-MM-DD"
+    expected_harvest_date = Column(String(30), nullable=True)
+    status = Column(String(30), default="active")  # "active", "harvested", "dormant"
+    created_at = Column(DateTime, default=utc_now)
+
+    farmer = relationship("Farmer", back_populates="crop_batches")
+    growth_logs = relationship("GrowthLog", back_populates="batch", cascade="all, delete-orphan", order_by="desc(GrowthLog.created_at)")
+
+
+class GrowthLog(Base):
+    __tablename__ = "growth_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    batch_id = Column(Integer, ForeignKey("crop_batches.id"), nullable=False)
+    image_url = Column(String(500), nullable=False)
+    growth_stage = Column(String(100), nullable=False)  # e.g. "Vegetative (V4)", "Tasseling", "Bulbing"
+    health_score = Column(Integer, default=85)  # 0 to 100
+    days_after_planting = Column(Integer, default=0)
+    canopy_coverage = Column(String(50), nullable=True)
+    actionable_tasks = Column(Text, nullable=True)  # JSON list of tasks: ["Time to weed", "Top-dress with CAN"]
+    gemma_analysis = Column(Text, nullable=True)
+    estimated_days_to_harvest = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+
+    batch = relationship("CropBatch", back_populates="growth_logs")
 
 
 class DiseaseScan(Base):
