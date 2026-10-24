@@ -30,6 +30,7 @@ let speechRecognition = null;
 let isRecording = false;
 let currentUtterance = null;
 let allMarketPrices = [];
+let pendingChatSaleDraft = null;
 
 // App Startup
 document.addEventListener("DOMContentLoaded", async () => {
@@ -570,6 +571,16 @@ async function loadWeather() {
       const summaryEl = document.getElementById("seasonalSummary");
       if (summaryEl) summaryEl.innerText = `${so.season_phase} across ${county} County.`;
 
+      const simpleSummaryEl = document.getElementById("seasonalSimpleSummary");
+      if (simpleSummaryEl && so.simple_forecast_summary) {
+        simpleSummaryEl.innerText = so.simple_forecast_summary;
+      }
+
+      const moistureHintEl = document.getElementById("seasonalMoistureHint");
+      if (moistureHintEl && so.soil_moisture) {
+        moistureHintEl.innerText = `Soil Moisture Index: ${so.soil_moisture}`;
+      }
+
       const moistureEl = document.getElementById("seasonalSoilMoisture");
       if (moistureEl) moistureEl.innerText = so.soil_moisture;
 
@@ -869,7 +880,10 @@ function closeNewPlotModal() {
 
 async function handleCreatePlotSubmit(e) {
   e.preventDefault();
-  if (!currentFarmer) return;
+  if (!currentFarmer) {
+    alert("Please sign up or select your farmer profile before registering a plot.");
+    return;
+  }
 
   const name = document.getElementById("plotName").value.trim();
   const crop = document.getElementById("plotCrop").value.trim();
@@ -899,9 +913,10 @@ async function handleCreatePlotSubmit(e) {
       document.getElementById("newPlotForm").reset();
       await loadCropBatches();
       selectCropPlot(data.id);
+      alert(`Plot "${data.name}" (${data.crop}) successfully registered!`);
     } else {
-      const err = await res.json();
-      alert("Failed creating plot: " + (err.detail || "Check inputs."));
+      const err = await res.json().catch(() => ({}));
+      alert("Failed creating plot: " + (err.detail || "Please check inputs."));
     }
   } catch (err) {
     alert("Network error: " + err.message);
@@ -1030,20 +1045,33 @@ async function runDiseaseScan() {
 
 function renderDiseaseResult(data) {
   const card = document.getElementById("diseaseResultCard");
-  card.classList.add("active");
+  const emptyPrompt = document.getElementById("diseaseEmptyPrompt");
+  if (emptyPrompt) emptyPrompt.style.display = "none";
+  if (card) {
+    card.style.display = "block";
+    card.classList.add("active");
+  }
 
-  document.getElementById("resultDiagnosis").innerText = data.diagnosis;
-  document.getElementById("resultCrop").innerText = `Crop: ${data.crop_type} · Severity: ${data.severity}`;
-  document.getElementById("resultConfidenceBadge").innerText = `${data.confidence_score}% Confidence`;
+  const crop = data.crop || data.crop_type || "Identified Crop";
+  const confidence = data.confidence || data.confidence_score || "High";
+  const diagnosis = data.diagnosis || "Crop Health Analysis";
+  const symptoms = data.symptoms || "Observable symptoms identified on foliage.";
+  const organic = data.organic_treatment || "Routine shamba hygiene and field rogueing.";
+  const chemical = data.chemical_treatment || "Consult local agrovet for approved fungicides/insecticides.";
+  const prevention = data.prevention || data.preventative_measures || "Rotate crops each season and plant certified seed.";
 
-  document.getElementById("resultSymptoms").innerText = data.symptoms;
-  document.getElementById("resultOrganic").innerText = data.organic_treatment;
-  document.getElementById("resultChemical").innerText = data.chemical_treatment;
-  document.getElementById("resultPrevention").innerText = data.preventative_measures;
+  document.getElementById("resultDiagnosis").innerText = diagnosis;
+  document.getElementById("resultCrop").innerText = `Crop: ${crop}`;
+  document.getElementById("resultConfidenceBadge").innerText = `${confidence} Confidence`;
+
+  document.getElementById("resultSymptoms").innerText = symptoms;
+  document.getElementById("resultOrganic").innerText = organic;
+  document.getElementById("resultChemical").innerText = chemical;
+  document.getElementById("resultPrevention").innerText = prevention;
 
   document.getElementById("resultCloudStorageMeta").innerText = `Cloud Archive: DigitalOcean Spaces (${data.model_used || "Gemma 4-26B"})`;
 
-  card.scrollIntoView({ behavior: "smooth" });
+  if (card) card.scrollIntoView({ behavior: "smooth" });
 }
 
 // Text-to-Speech Controls (Read Aloud & Stop Speaking)
@@ -1193,13 +1221,68 @@ function handleChatKeyPress(event) {
 async function sendChatMessage() {
   const input = document.getElementById("chatTextInput");
   const message = input.value.trim();
-  if (!message || !currentFarmer) return;
+  if (!message) return;
+
+  if (!currentFarmer) {
+    appendChatBubble("bot", "Please complete your farmer profile first to log sales and link farm records.");
+    return;
+  }
 
   input.value = "";
   const hint = document.getElementById("voiceReviewHint");
   if (hint) hint.style.display = "none";
 
   appendChatBubble("user", message);
+
+  // Check if user is conversationally confirming a detected sale
+  const cleanMsg = message.toLowerCase().trim();
+  const isConfirmIntent = [
+    "record", "save", "confirm", "yes", "rekodi", "hifadhi", "ndio", "sawa",
+    "record it", "save it", "save to ledger", "record to ledger", "confirm sale",
+    "weka kwa ledger", "weka", "ingiza"
+  ].some(k => cleanMsg === k || cleanMsg.startsWith(k + " ") || cleanMsg.endsWith(" " + k) || cleanMsg.includes(k));
+
+  if (pendingChatSaleDraft && isConfirmIntent) {
+    const draft = pendingChatSaleDraft;
+    pendingChatSaleDraft = null;
+    const draftPayload = {
+      farmer_id: currentFarmer.id,
+      transaction_type: "income",
+      category: "Produce Sale",
+      commodity: draft.commodity,
+      quantity: draft.quantity,
+      unit: draft.unit,
+      unit_price: draft.unit_price,
+      total_amount: draft.total_amount,
+      counterparty: draft.counterparty || draft.buyer || "Wholesale Buyer",
+      notes: "Confirmed conversationally via Kilimo AI Copilot",
+    };
+
+    const savingBubble = appendChatBubble("bot", `Sawa kabisa! Recording your sale of KES ${draft.total_amount.toLocaleString()} (${draft.commodity}) to your farm ledger...`);
+
+    try {
+      const res = await fetch("/api/ledger/transaction", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(draftPayload),
+      });
+
+      savingBubble.remove();
+      if (res.ok) {
+        appendChatBubble("bot", `Imerekodiwa! Successfully saved KES ${draft.total_amount.toLocaleString()} for ${draft.commodity} to your farm ledger. Your financial totals and credit index have been updated.`);
+        loadDashboardData();
+        if (typeof loadLedgerTransactions === "function") loadLedgerTransactions();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        appendChatBubble("bot", "Pole sana, error saving transaction: " + (err.detail || "Please retry using the card button."));
+      }
+    } catch (e) {
+      savingBubble.remove();
+      appendChatBubble("bot", "Network error saving transaction. Please check your connection and retry.");
+    }
+    return;
+  }
+
   const loadingBubble = appendChatBubble("bot", "Analyzing with Gemma AI...");
 
   const formData = new FormData();
@@ -1224,6 +1307,7 @@ async function sendChatMessage() {
 
     // If sale detected, render confirmation card DIRECTLY IN-CHAT
     if (data.is_sale && data.draft_sale) {
+      pendingChatSaleDraft = data.draft_sale;
       appendChatSaleCard(data.draft_sale, data.market_evaluation);
     }
   } catch (err) {
@@ -1284,7 +1368,10 @@ function appendChatSaleCard(draft, marketEval) {
 }
 
 async function confirmChatTransaction(btn, encodedDraft) {
-  if (!currentFarmer) return;
+  if (!currentFarmer) {
+    alert("Please complete your farmer profile first.");
+    return;
+  }
 
   btn.disabled = true;
   btn.innerText = "Adding to Ledger...";
@@ -1300,7 +1387,7 @@ async function confirmChatTransaction(btn, encodedDraft) {
     unit: draft.unit,
     unit_price: draft.unit_price,
     total_amount: draft.total_amount,
-    counterparty: draft.buyer || "Wholesale Buyer",
+    counterparty: draft.counterparty || draft.buyer || "Wholesale Buyer",
     notes: "Logged conversationally via Kilimo AI Copilot",
   };
 
@@ -1312,6 +1399,7 @@ async function confirmChatTransaction(btn, encodedDraft) {
     });
 
     if (res.ok) {
+      pendingChatSaleDraft = null;
       const card = btn.closest(".chat-sale-card");
       if (card) {
         card.classList.add("confirmed");
@@ -1323,10 +1411,12 @@ async function confirmChatTransaction(btn, encodedDraft) {
         `;
       }
       loadDashboardData();
+      if (typeof loadLedgerTransactions === "function") loadLedgerTransactions();
     } else {
       btn.disabled = false;
       btn.innerText = "Retry Confirmation";
-      alert("Failed saving transaction.");
+      const err = await res.json().catch(() => ({}));
+      alert("Failed saving transaction: " + (err.detail || "Server error"));
     }
   } catch (err) {
     btn.disabled = false;
@@ -1370,6 +1460,7 @@ async function runReceiptScan() {
   const formData = new FormData();
   formData.append("farmer_id", currentFarmer.id);
   formData.append("image", receiptSelectedFile);
+  formData.append("receipt", receiptSelectedFile);
 
   try {
     const res = await fetch("/api/scan/receipt", {
@@ -1381,7 +1472,7 @@ async function runReceiptScan() {
       const data = await res.json();
       renderReceiptResult(data);
     } else {
-      const err = await res.json();
+      const err = await res.json().catch(() => ({}));
       alert("Receipt extraction failed: " + (err.detail || "Unable to parse image."));
     }
   } catch (err) {
@@ -1394,6 +1485,10 @@ async function runReceiptScan() {
 
 function renderReceiptResult(data) {
   const box = document.getElementById("receiptResultBox");
+  if (box) {
+    box.style.display = "block";
+    box.classList.add("active");
+  }
   const items = data.line_items || [];
 
   let itemsHtml = items.map(it => `

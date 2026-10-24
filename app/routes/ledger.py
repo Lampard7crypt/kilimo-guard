@@ -36,23 +36,26 @@ class AcceptTransactionRequest(BaseModel):
 
 
 @router.post("/receipt/scan")
+@router.post("/receipt")
 def scan_receipt(
-    receipt: UploadFile = File(...),
+    receipt: Optional[UploadFile] = File(None),
+    image: Optional[UploadFile] = File(None),
     farmer_id: Optional[int] = Form(None),
     db: Session = Depends(get_db),
 ):
     """Scan an agrovet receipt, upload to DigitalOcean Spaces, parse line items with Gemma, and return draft preview."""
-    if not receipt.filename:
+    file_to_scan = receipt or image
+    if not file_to_scan or not file_to_scan.filename:
         raise HTTPException(status_code=400, detail="Please upload a receipt image.")
 
-    content_type = receipt.content_type or "image/jpeg"
+    content_type = file_to_scan.content_type or "image/jpeg"
     if content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(
             status_code=415,
             detail="Unsupported image format. Please upload JPEG, PNG, or WebP.",
         )
 
-    file_bytes = receipt.file.read(MAX_IMAGE_BYTES + 1)
+    file_bytes = file_to_scan.file.read(MAX_IMAGE_BYTES + 1)
     if len(file_bytes) > MAX_IMAGE_BYTES:
         raise HTTPException(
             status_code=413,
@@ -62,7 +65,7 @@ def scan_receipt(
     # 1. Archive to DigitalOcean Spaces
     receipt_url, local_path = save_upload(
         file_bytes=file_bytes,
-        original_filename=receipt.filename,
+        original_filename=file_to_scan.filename,
         folder="receipts",
         content_type=content_type,
     )
@@ -92,6 +95,22 @@ def scan_receipt(
     total_amt = float(data.get("total_amount", 0.0) or 0.0)
     qty = float(data.get("quantity", 1.0) or 1.0)
     unit_p = float(data.get("unit_price", 0.0) or (total_amt / qty if qty > 0 else total_amt))
+    vendor_name = data.get("vendor", "Agrovet Shop")
+    receipt_date = data.get("date", "")
+    raw_items = data.get("items", [])
+
+    line_items = []
+    for it in raw_items:
+        it_name = it.get("name", it.get("item_name", "Supply Item"))
+        it_qty = it.get("quantity", 1)
+        it_up = it.get("unit_price", 0)
+        it_tot = it.get("total", it.get("total_price", (it_qty * it_up) if it_up else 0))
+        line_items.append({
+            "item_name": it_name,
+            "quantity": it_qty,
+            "unit_price": it_up,
+            "total_price": it_tot,
+        })
 
     draft_preview = {
         "farmer_id": farmer_id,
@@ -102,9 +121,12 @@ def scan_receipt(
         "unit": data.get("unit", "units"),
         "unit_price": unit_p,
         "total_amount": total_amt,
-        "counterparty": data.get("vendor", "Agrovet Shop"),
+        "counterparty": vendor_name,
+        "merchant_name": vendor_name,
+        "date": receipt_date,
         "receipt_url": receipt_url,
-        "items": data.get("items", []),
+        "items": raw_items,
+        "line_items": line_items,
         "summary": data.get("summary", "Scanned farm expense receipt."),
         "model_used": answer.model,
     }
@@ -113,6 +135,7 @@ def scan_receipt(
 
 
 @router.post("/accept")
+@router.post("/transaction")
 def accept_transaction(payload: AcceptTransactionRequest, db: Session = Depends(get_db)):
     """Save an accepted draft transaction into the permanent ledger."""
     transaction = LedgerTransaction(

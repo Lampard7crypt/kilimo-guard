@@ -132,3 +132,15 @@ def get_scan_history(farmer_id: Optional[int] = None, db: Session = Depends(get_
         }
         for s in scans
     ]
+
+
+@router.post("/receipt")
+def scan_receipt_alias(
+    receipt: Optional[UploadFile] = File(None),
+    image: Optional[UploadFile] = File(None),
+    farmer_id: Optional[int] = Form(None),
+    db: Session = Depends(get_db),
+):
+    """Alias for receipt scanning under /api/scan/receipt."""
+    from app.routes.ledger import scan_receipt
+    return scan_receipt(receipt=receipt, image=image, farmer_id=farmer_id, db=db)

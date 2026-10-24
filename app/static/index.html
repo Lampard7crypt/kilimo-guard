@@ -313,6 +313,18 @@
               </h3>
               <span class="badge-pill" id="seasonalCyclePill">Kenyan Season</span>
             </div>
+            <!-- Simple, Intuitive Farmer Weather Narrative & Soil Moisture Banner -->
+            <div class="seasonal-highlight-banner" id="seasonalHighlightBanner">
+              <div class="seasonal-banner-icon">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><path d="m9 16-2 4"/><path d="m13 16-2 4"/></svg>
+              </div>
+              <div class="seasonal-banner-content" style="flex:1;">
+                <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--primary-dark); letter-spacing: 0.04em; margin-bottom: 0.15rem;">Intuitive Agro-Weather Forecast</div>
+                <strong style="font-size: 0.95rem; color: var(--text-main); display: block; line-height: 1.35;" id="seasonalSimpleSummary">Expect healthy rains in the coming month, followed by sunny drying weather.</strong>
+                <span class="seasonal-banner-sub" style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 0.25rem;" id="seasonalMoistureHint">Soil Moisture Index: 74% (Good: soil has healthy moisture for seeds and roots)</span>
+              </div>
+            </div>
+
             <p style="font-size: 0.86rem; color: var(--text-muted); margin-bottom: 0.75rem;" id="seasonalSummary">
               Long-term agro-climatic projection across Kenyan counties to guide crop planting calendars, irrigation, and harvest protection.
             </p>
@@ -611,6 +623,17 @@
           </div>
 
           <div>
+            <!-- Empty State Prompt Before Scan -->
+            <div class="card" id="diseaseEmptyPrompt" style="text-align: center; padding: 3rem 1.5rem; color: var(--text-muted);">
+              <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--bg-card-subtle); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; color: var(--primary);">
+                <svg class="icon" style="width:28px; height:28px;" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16 3 3"/></svg>
+              </div>
+              <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.4rem;">Gemma Plant Pathologist Ready</h4>
+              <p style="font-size: 0.88rem; max-width: 340px; margin: 0 auto; line-height: 1.5;">
+                Upload a clear photo of crop leaves, stem, or fruit on the left. Google Gemma will diagnose pathogens, assess severity, and prescribe verified Kenyan treatments.
+              </p>
+            </div>
+
             <!-- Diagnosis Result Card -->
             <div class="card result-box" id="diseaseResultCard">
               <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">

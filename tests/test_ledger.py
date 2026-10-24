@@ -149,3 +149,30 @@ def test_generate_trust_index(client):
     assert cached["score"] == 755
     assert cached["grade"] == "A"
 
+
+def test_record_transaction_via_transaction_endpoint(client):
+    """Ensure POST /api/ledger/transaction successfully records an income/expense transaction."""
+    farmer_res = client.post(
+        "/api/farmer/profile",
+        json={"name": "Mutua", "phone": "0722334455", "county": "Machakos", "primary_crop": "Mangoes"},
+    )
+    farmer_id = farmer_res.json()["id"]
+
+    payload = {
+        "farmer_id": farmer_id,
+        "transaction_type": "income",
+        "category": "Produce Sale",
+        "commodity": "Apple Mangoes",
+        "quantity": 50,
+        "unit": "cartons",
+        "unit_price": 800.0,
+        "total_amount": 40000.0,
+        "counterparty": "Wakulima Trader",
+        "notes": "Logged conversationally via Kilimo AI Copilot",
+    }
+    res = client.post("/api/ledger/transaction", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert data["transaction"]["total_amount"] == 40000.0
+

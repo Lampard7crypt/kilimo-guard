@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KilimoGuard — AI Agricultural Operating System & Digital Ledger</title>
+  <meta name="description" content="AI Copilot and Digital Ledger for Kenyan Farmers powered by Google Gemma and DigitalOcean. Crop disease scanning, voice-enabled sales logging, agrovet receipt scanner, Kenya market prices, and Kilimo-Trust-Index informal credit scoring.">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23059669%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22M7 20h10%22/><path d=%22M10 20c5.5-2.5.8-6.4 3-10%22/><path d=%22M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z%22/><path d=%22M14.1 6a7 7 0 0 1 1.1 4c-1.7 1-3.3 1.1-4.7.7a7 7 0 0 1 3.6-4.7z%22/></svg>">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 1 1.1 4c-1.7 1-3.3 1.1-4.7.7a7 7 0 0 1 3.6-4.7z"/></svg>
+        </div>
+        <span class="brand-name">KilimoGuard</span>
+      </div>
+
+      <div class="header-actions">
+        <span class="do-badge" id="cloudStatusBadge" title="Integrated with DigitalOcean Spaces & PostgreSQL">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+          DigitalOcean Powered
+        </span>
+
+        <!-- Top Right Account Menu (Hidden on signup view) -->
+        <div class="account-menu-container" id="accountMenuContainer" style="display: none;">
+          <button class="account-trigger-btn" id="accountTriggerBtn" onclick="toggleAccountMenu(event)" aria-haspopup="true">
+            <div class="avatar" id="headerAvatar">
+              <span id="headerAvatarInitial">M</span>
+              <img id="headerAvatarImg" src="" alt="Avatar" style="display: none;" />
+            </div>
+            <div class="account-trigger-meta">
+              <span class="account-trigger-name" id="farmerBadgeName">Mkulima</span>
+              <span class="account-trigger-county" id="farmerBadgeCounty">Nakuru</span>
+            </div>
+            <svg class="icon icon-xs chevron-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+
+          <!-- Account Dropdown Menu -->
+          <div class="account-dropdown-menu" id="accountDropdownMenu">
+            <div class="account-dropdown-header">
+              <div class="avatar avatar-md" id="dropdownAvatar">
+                <span id="dropdownAvatarInitial">M</span>
+                <img id="dropdownAvatarImg" src="" alt="Avatar" style="display: none;" />
+              </div>
+              <div class="account-dropdown-farmer">
+                <strong id="dropdownFarmerName">Mkulima</strong>
+                <span id="dropdownFarmerPhone">07XXXXXXXX</span>
+              </div>
+            </div>
+            <div class="account-dropdown-divider"></div>
+            <a class="account-dropdown-item" href="javascript:void(0)" onclick="goToProfilePage()">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span>My Profile & Farm Settings</span>
+            </a>
+            <a class="account-dropdown-item" href="javascript:void(0)" onclick="switchTab('growth'); closeAccountMenu();">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/></svg>
+              <span>Crop Growth Tracker</span>
+            </a>
+            <a class="account-dropdown-item" href="javascript:void(0)" onclick="switchTab('trust'); closeAccountMenu();">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+              <span>Kilimo Trust Index</span>
+            </a>
+            <div class="account-dropdown-divider"></div>
+            <button class="account-dropdown-item signout-item" onclick="signOutFarmer()">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- VIEW 1: DEDICATED SIGN-UP / ONBOARDING PAGE -->
+    <div class="view-container" id="viewSignup">
+      <div class="signup-wrapper">
+        <div class="signup-hero">
+          <h1>Farmer Registration & SACCO Credit Registry</h1>
+          <p>Register your agricultural enterprise to access AI disease diagnosis, phenology tracking, conversational sales ledger, and live Kilimo-Trust-Index scoring.</p>
+        </div>
+
+        <div class="signup-card">
+          <form id="signupForm" onsubmit="handleSignupSubmit(event)">
+
+            <!-- Section 1: Farmer Identity -->
+            <div class="form-section-title">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span>1. Farmer Identity</span>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="signupName">Full Legal Name</label>
+                <input type="text" class="form-control" id="signupName" required placeholder="e.g. David Kipkorir Koech">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="signupPhone">Mobile Number (M-Pesa / Account Key)</label>
+                <input type="tel" class="form-control" id="signupPhone" required placeholder="e.g. 0712345678">
+              </div>
+            </div>
+
+            <!-- Section 2: Farm Location & Scale -->
+            <div class="form-section-title" style="margin-top: 1rem;">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>2. Farm Location & Acreage</span>
+            </div>
+            <div class="grid-3">
+              <div class="form-group">
+                <label class="form-label" for="signupCounty">County</label>
+                <select class="form-control" id="signupCounty" required></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="signupSubCounty">Sub-County / Ward</label>
+                <input type="text" class="form-control" id="signupSubCounty" placeholder="e.g. Rongai / Kuresoi / Naivasha">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="signupAcreage">Total Farm Size (Acres)</label>
+                <input type="number" step="0.25" min="0.25" class="form-control" id="signupAcreage" required value="2.5">
+              </div>
+            </div>
+
+            <!-- Section 3: Crops Cultivated (Multi-Select) -->
+            <div class="form-section-title" style="margin-top: 1rem;">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/></svg>
+              <span>3. Crops & Farm Enterprises (Select All That Apply)</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              Tap crops to add them to your farm profile. Diversified crop portfolios improve your Kilimo-Trust-Index.
+            </p>
+            <div class="crop-chips-grid" id="cropChipsContainer">
+              <!-- Rendered via JS -->
+            </div>
+            <div class="form-group" style="margin-top: 0.5rem;">
+              <input type="text" class="form-control" id="customCropInput" placeholder="+ Add another crop and press Enter (e.g. Macadamia, Sorghum, Watermelons)" onkeydown="handleCustomCropKeydown(event)">
+            </div>
+
+            <!-- Section 4: SACCO / Cooperative Membership -->
+            <div class="form-section-title" style="margin-top: 1.5rem;">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+              <span>4. SACCO or Cooperative Affiliation</span>
+            </div>
+
+            <div class="sacco-banner-toggle">
+              <div class="sacco-banner-info">
+                <div class="sacco-badge-icon">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.95rem;">Agricultural SACCO or Farmers' Cooperative Member</div>
+                  <div style="font-size: 0.8rem; color: var(--text-muted);">Enables Kilimo-Trust-Index formal credit scoring and input financing vouchers.</div>
+                </div>
+              </div>
+              <label style="display:flex; align-items:center; cursor:pointer;">
+                <input type="checkbox" id="signupSaccoToggle" onchange="toggleSaccoFields(this.checked)" style="width: 20px; height: 20px; accent-color: var(--primary);">
+              </label>
+            </div>
+
+            <div class="sacco-fields-box" id="saccoFieldsBox" style="display: none;">
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="signupSaccoSelect">SACCO / Cooperative Name</label>
+                  <select class="form-control" id="signupSaccoSelect" onchange="handleSaccoSelectChange(this)">
+                    <option value="Murata Farm SACCO">Murata Farm SACCO</option>
+                    <option value="Githunguri Dairy Farmers Coop">Githunguri Dairy Farmers Cooperative</option>
+                    <option value="Harambee SACCO">Harambee SACCO</option>
+                    <option value="Kenya Police SACCO">Kenya Police SACCO</option>
+                    <option value="Stima SACCO">Stima SACCO</option>
+                    <option value="Bomet Tea Farmers SACCO">Bomet Tea Farmers SACCO</option>
+                    <option value="Wakulima Dairy Cooperative">Wakulima Dairy Cooperative</option>
+                    <option value="New KCC Cooperative">New KCC Cooperative</option>
+                    <option value="custom">Other Agricultural SACCO (specify)...</option>
+                  </select>
+                  <input type="text" class="form-control" id="signupCustomSacco" placeholder="Enter SACCO name" style="display: none; margin-top: 0.5rem;">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="signupSaccoId">Member Number / Account ID</label>
+                  <input type="text" class="form-control" id="signupSaccoId" placeholder="e.g. SACCO-44910">
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 2rem;">
+              <button type="submit" class="btn btn-primary" style="padding: 0.85rem 2rem; font-size: 1rem;">
+                <span>Create Farm Profile & Access Dashboard</span>
+                <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: MAIN DASHBOARD & TABS APPLICATION -->
+    <div class="view-container active" id="viewApp">
+
+      <!-- Navigation Tabs -->
+      <nav class="tabs-nav" role="tablist">
+        <button class="tab-btn active" onclick="switchTab('dashboard')" id="tabBtnDashboard">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+          Dashboard
+        </button>
+        <button class="tab-btn trust-btn" onclick="switchTab('trust')" id="tabBtnTrust">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+          Kilimo Trust Index
+          <span class="badge-pill">Gemma AI</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('growth')" id="tabBtnGrowth">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/></svg>
+          Crop Growth Tracker
+        </button>
+        <button class="tab-btn" onclick="switchTab('disease')" id="tabBtnDisease">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16 3 3"/></svg>
+          Scan Crop Disease
+        </button>
+        <button class="tab-btn" onclick="switchTab('receipts')" id="tabBtnReceipts">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-8"/><path d="M16 12h-8"/><path d="M14 16h-6"/></svg>
+          Scan Receipts
+        </button>
+        <button class="tab-btn" onclick="switchTab('ledger')" id="tabBtnLedger">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          Digital Ledger
+        </button>
+        <button class="tab-btn" onclick="switchTab('market')" id="tabBtnMarket">
+          <svg class="icon" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+          Kenya Market Prices
+        </button>
+        <button class="tab-btn" onclick="switchTab('profile')" id="tabBtnProfile">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          My Profile
+        </button>
+      </nav>
+
+      <!-- 1. DASHBOARD PANEL -->
+      <section class="tab-panel active" id="panelDashboard">
+        <div class="grid-4" style="margin-bottom: 1.5rem;">
+          <div class="stat-card income">
+            <span class="stat-label">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              Total Sales Revenue
+            </span>
+            <span class="stat-value" id="kpiIncome">KES 0</span>
+            <span class="stat-meta">Verified farm produce sales</span>
+          </div>
+          <div class="stat-card expense">
+            <span class="stat-label">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+              Operating Expenses
+            </span>
+            <span class="stat-value" id="kpiExpense">KES 0</span>
+            <span class="stat-meta">Fertilizer, seed, chemicals, labor</span>
+          </div>
+          <div class="stat-card profit">
+            <span class="stat-label">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Net Farm Profit
+            </span>
+            <span class="stat-value" id="kpiProfit">KES 0</span>
+            <span class="stat-meta" id="kpiProfitMargin">Healthy cash flow</span>
+          </div>
+          <div class="stat-card trust">
+            <span class="stat-label">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+              Kilimo Trust Index
+            </span>
+            <span class="stat-value" id="dashTrustScore">--</span>
+            <span class="stat-meta" id="dashTrustStatus">Gemma Credit Rating</span>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- Live Weather & Agronomy Card -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M15.947 12.65a4 4 0 0 0-5.925-4.128"/><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z"/><path d="m9 16-2 4"/><path d="m13 16-2 4"/></svg>
+                Current Weather & Spraying (<span id="dashWeatherCounty">Nakuru</span>)
+              </h3>
+              <button class="btn btn-secondary" style="padding: 0.3rem 0.65rem; font-size: 0.78rem;" onclick="loadWeather()">
+                <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                Refresh
+              </button>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+              <div>
+                <div style="font-size: 2.2rem; font-weight: 800;" id="dashWeatherTemp">--°C</div>
+                <div style="font-size: 0.88rem; color: var(--text-muted);" id="dashWeatherRange">Min --°C / Max --°C</div>
+              </div>
+              <div style="text-align: right; font-size: 0.88rem; line-height: 1.6;">
+                <div>Rain Probability: <strong id="dashWeatherRain">--%</strong></div>
+                <div>Wind Speed: <strong id="dashWeatherWind">-- km/h</strong></div>
+                <div>Relative Humidity: <strong id="dashWeatherHumidity">--%</strong></div>
+              </div>
+            </div>
+            <div style="background: var(--bg-card-subtle); padding: 0.85rem; border-radius: var(--radius-md); border-left: 4px solid var(--primary);">
+              <div style="font-weight: 700; font-size: 0.82rem; text-transform: uppercase; color: var(--primary-dark); margin-bottom: 0.2rem;">Agronomy Recommendation:</div>
+              <p style="font-size: 0.9rem;" id="dashWeatherAdvisory">Fetching real-time satellite weather advisory...</p>
+            </div>
+          </div>
+
+          <!-- Seasonal Climate Outlook Card (Next 3 Months) -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                Seasonal Agro-Climatic Outlook (Next 3 Months)
+              </h3>
+              <span class="badge-pill" id="seasonalCyclePill">Kenyan Season</span>
+            </div>
+            <!-- Simple, Intuitive Farmer Weather Narrative & Soil Moisture Banner -->
+            <div class="seasonal-highlight-banner" id="seasonalHighlightBanner">
+              <div class="seasonal-banner-icon">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><path d="m9 16-2 4"/><path d="m13 16-2 4"/></svg>
+              </div>
+              <div class="seasonal-banner-content" style="flex:1;">
+                <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--primary-dark); letter-spacing: 0.04em; margin-bottom: 0.15rem;">Intuitive Agro-Weather Forecast</div>
+                <strong style="font-size: 0.95rem; color: var(--text-main); display: block; line-height: 1.35;" id="seasonalSimpleSummary">Expect healthy rains in the coming month, followed by sunny drying weather.</strong>
+                <span class="seasonal-banner-sub" style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 0.25rem;" id="seasonalMoistureHint">Soil Moisture Index: 74% (Good: soil has healthy moisture for seeds and roots)</span>
+              </div>
+            </div>
+
+            <p style="font-size: 0.86rem; color: var(--text-muted); margin-bottom: 0.75rem;" id="seasonalSummary">
+              Long-term agro-climatic projection across Kenyan counties to guide crop planting calendars, irrigation, and harvest protection.
+            </p>
+            <div class="seasonal-metrics-bar">
+              <div class="seasonal-metric-item">
+                <span class="seasonal-metric-label">Soil Moisture Index</span>
+                <span class="seasonal-metric-val" id="seasonalSoilMoisture">74% (Optimal)</span>
+              </div>
+              <div class="seasonal-metric-item">
+                <span class="seasonal-metric-label">Climate Stress Risk</span>
+                <span class="seasonal-metric-val" id="seasonalRisk">Low Risk</span>
+              </div>
+              <div class="seasonal-metric-item">
+                <span class="seasonal-metric-label">Projection Window</span>
+                <span class="seasonal-metric-val" id="seasonalWindow">Upcoming Quarter</span>
+              </div>
+            </div>
+            <div class="seasonal-months-grid" id="seasonalMonthsContainer">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Farm Actions -->
+        <div class="card" style="margin-top: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title">
+              <svg class="icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Quick Shamba Actions
+            </h3>
+          </div>
+          <div class="grid-4" style="gap: 0.75rem;">
+            <button class="btn btn-primary" onclick="switchTab('growth')">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/></svg>
+              Track Crop Growth
+            </button>
+            <button class="btn btn-secondary" onclick="switchTab('disease')">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16 3 3"/></svg>
+              Diagnose Crop Disease
+            </button>
+            <button class="btn btn-secondary" onclick="switchTab('trust')">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+              Kilimo Trust Index
+            </button>
+            <button class="btn btn-secondary" onclick="switchTab('market')">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+              Kenya Market Prices
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. KILIMO TRUST INDEX PANEL -->
+      <section class="tab-panel" id="panelTrust">
+        <div class="trust-hero-card">
+          <div class="trust-hero-content">
+            <div class="trust-score-display">
+              <div class="trust-score-ring">
+                <span class="trust-number" id="trustScoreVal">--</span>
+                <span class="trust-max">/ 850</span>
+              </div>
+              <div>
+                <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85;">Informal Credit & Farm Health Score</div>
+                <h2 style="font-size: 1.6rem; font-weight: 800; margin: 0.2rem 0;" id="trustGradeVal">Grade Pending</h2>
+                <div class="trust-badge-pill" id="trustRiskPill">Requires Gemma Evaluation</div>
+              </div>
+            </div>
+
+            <div class="trust-credit-box">
+              <div class="credit-limit-label">SACCO Credit Recommendation</div>
+              <div class="credit-limit-amount" id="trustMaxCreditVal">KES --</div>
+              <div style="font-size: 0.78rem; opacity: 0.85;" id="trustRepaymentVal">Repayment Capacity: --</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h3 style="font-size: 1.15rem; font-weight: 700;">Underwriting Assessment Engine</h3>
+            <p style="font-size: 0.88rem; color: var(--text-muted);">
+              Powered by Google Gemma AI. Analyzes verified digital ledger transactions, crop diversification, SACCO membership, and farm management discipline.
+            </p>
+          </div>
+          <button class="btn btn-primary" id="calcTrustBtn" onclick="runGenerateTrustIndex()">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            <span id="calcTrustBtnText">Recalculate Trust Index with Gemma</span>
+          </button>
+        </div>
+
+        <div id="trustReportContainer" style="display: none;">
+          <div class="grid-2" style="margin-bottom: 1.25rem;">
+            <!-- Executive Health Assessment -->
+            <div class="trust-breakdown-card">
+              <div class="form-section-title">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                <span>Executive Cash Flow Assessment</span>
+              </div>
+              <p style="font-size: 0.92rem; line-height: 1.5;" id="trustExecSummary"></p>
+              <div style="margin-top: 0.85rem; font-size: 0.82rem; color: var(--text-muted);" id="trustAgronomicResilience"></div>
+            </div>
+
+            <!-- SACCO Underwriting Note -->
+            <div class="trust-breakdown-card">
+              <div class="form-section-title">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                <span>SACCO Credit Committee Guidance</span>
+              </div>
+              <div style="background: var(--bg-card-subtle); padding: 0.85rem; border-radius: var(--radius-sm); border-left: 3px solid var(--primary); font-size: 0.9rem;" id="trustSaccoNote">
+              </div>
+              <div style="margin-top: 0.75rem; font-size: 0.8rem; color: var(--text-muted);" id="trustTimestampMeta"></div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <!-- Key Strengths -->
+            <div class="trust-breakdown-card">
+              <div class="form-section-title">
+                <svg class="icon" style="color: var(--success);" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span>Credit Strengths</span>
+              </div>
+              <ul class="trust-bullet-list strengths" id="trustStrengthsList"></ul>
+            </div>
+
+            <!-- Risk Factors -->
+            <div class="trust-breakdown-card">
+              <div class="form-section-title">
+                <svg class="icon" style="color: var(--accent);" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span>Watchpoints & Risk Factors</span>
+              </div>
+              <ul class="trust-bullet-list risks" id="trustRisksList"></ul>
+            </div>
+          </div>
+
+          <!-- Formal Credit Voucher Card -->
+          <div class="sacco-voucher" id="saccoVoucherPrintBox">
+            <div class="sacco-voucher-header">
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                <strong style="font-size: 1rem;">KilimoGuard SACCO Underwriting Voucher</strong>
+              </div>
+              <button class="btn btn-secondary" style="padding: 0.25rem 0.65rem; font-size: 0.78rem;" onclick="window.print()">
+                <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Print / Save PDF
+              </button>
+            </div>
+            <div class="grid-3" style="font-size: 0.85rem; gap: 0.75rem;">
+              <div><strong>Farmer:</strong> <span id="voucherFarmerName">--</span></div>
+              <div><strong>County:</strong> <span id="voucherCounty">--</span></div>
+              <div><strong>SACCO Affiliation:</strong> <span id="voucherSacco">--</span></div>
+              <div><strong>Rating:</strong> <span id="voucherGrade">--</span></div>
+              <div><strong>Recommended Limit:</strong> <span id="voucherCredit" style="color: var(--primary-dark); font-weight: 700;">--</span></div>
+              <div><strong>Digital Certificate Hash:</strong> <span id="voucherHash" style="font-family: monospace; font-size: 0.76rem;">KG-SEC-7719B</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="trustEmptyPrompt" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg); border: 1px dashed var(--border);">
+          <svg class="icon icon-xl" style="color: var(--primary); margin-bottom: 0.5rem;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+          <h3>No Trust Index Generated Yet</h3>
+          <p style="font-size: 0.9rem; margin-top: 0.35rem; max-width: 500px; margin-left: auto; margin-right: auto;">
+            Click the button above to evaluate your farm profile, digital ledger, and SACCO standing with Google Gemma AI.
+          </p>
+        </div>
+      </section>
+
+      <!-- 3. CROP GROWTH TRACKER PANEL (NEW) -->
+      <section class="tab-panel" id="panelGrowth">
+        <div class="growth-header-bar">
+          <div>
+            <h2 style="font-size: 1.35rem; font-weight: 800; display:flex; align-items:center; gap:0.5rem;">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 1 1.1 4c-1.7 1-3.3 1.1-4.7.7a7 7 0 0 1 3.6-4.7z"/></svg>
+              Shamba Crop Growth & Phenology Tracker
+            </h2>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 0.2rem;">
+              Photograph your plots over time. Google Gemma analyzes vegetative progress, canopy cover, days after planting, and prescribes vital field actions (weeding, top-dressing, pest scouting).
+            </p>
+          </div>
+          <button class="btn btn-primary" onclick="openNewPlotModal()">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>+ Register New Plot</span>
+          </button>
+        </div>
+
+        <!-- Plots Selector Bar -->
+        <div class="crop-plots-bar" id="cropPlotsBar">
+          <!-- Rendered via JS -->
+        </div>
+
+        <div class="grid-2" style="margin-top: 1.5rem;">
+          <!-- Upload Growth Photo -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                Log Growth Milestone Photo
+              </h3>
+            </div>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
+              Capture your plot's canopy and stem development. Gemma will assess phenological maturity and prescribe actionable tasks.
+            </p>
+
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label class="form-label" for="growthActiveBatchSelect">Target Plot</label>
+              <select class="form-control" id="growthActiveBatchSelect" onchange="selectCropPlot(this.value)"></select>
+            </div>
+
+            <div class="upload-zone" id="growthDropzone" onclick="document.getElementById('growthFileInput').click()">
+              <div class="upload-icon-circle">
+                <svg class="icon" viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/></svg>
+              </div>
+              <div class="upload-text">Click or drag & drop plot photograph</div>
+              <div class="upload-hint">Photos saved to DigitalOcean Spaces for chronological shamba tracking</div>
+              <input type="file" id="growthFileInput" accept="image/*" style="display:none" onchange="previewGrowthImage(event)">
+            </div>
+
+            <div class="image-preview-container" id="growthPreviewBox">
+              <img id="growthPreviewImg" src="" alt="Growth Preview">
+              <button class="preview-clear-btn" onclick="clearGrowthPreview(event)">✕</button>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" id="growthAnalyzeBtn" onclick="runGrowthAnalysis()" disabled>
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m12 6 4 6h-8z"/></svg>
+              <span>Analyze Growth Phenology with Gemma</span>
+            </button>
+          </div>
+
+          <!-- Active Plot Summary & Latest Analysis -->
+          <div class="card" id="growthAnalysisCard">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                Current Plot Phenology Assessment
+              </h3>
+            </div>
+            <div id="growthEmptyCard" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+              <svg class="icon icon-xl" style="opacity:0.3; margin-bottom:0.5rem;" viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/></svg>
+              <p>Select or create a plot, then upload a field photograph to assess phenology.</p>
+            </div>
+            <div id="growthActiveResult" style="display: none;">
+              <!-- Filled via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Chronological Visual Growth Timeline -->
+        <div class="card" style="margin-top: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title">
+              <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+              Plot Progression Timeline & Field Log
+            </h3>
+          </div>
+          <div class="growth-timeline" id="growthTimelineList">
+            <!-- Timeline items rendered via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. CROP DISEASE SCANNER PANEL -->
+      <section class="tab-panel" id="panelDisease">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16 3 3"/></svg>
+                Scan Crop for Pathogens & Pests
+              </h3>
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+              Photograph diseased leaves, fruit, or stems. Gemma plant pathologist analyzes symptoms and recommends approved Kenyan treatments.
+            </p>
+
+            <div class="upload-zone" id="diseaseDropzone" onclick="document.getElementById('diseaseFileInput').click()">
+              <div class="upload-icon-circle">
+                <svg class="icon" viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/></svg>
+              </div>
+              <div class="upload-text">Click or drag & drop crop leaf photo</div>
+              <div class="upload-hint">Supports JPEG, PNG, WebP · Stored on DigitalOcean Spaces</div>
+              <input type="file" id="diseaseFileInput" accept="image/*" style="display:none" onchange="previewDiseaseImage(event)">
+            </div>
+
+            <div class="image-preview-container" id="diseasePreviewBox">
+              <img id="diseasePreviewImg" src="" alt="Crop Preview">
+              <button class="preview-clear-btn" onclick="clearDiseasePreview(event)">✕</button>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+              <label class="form-label" for="diseaseCropHint">Crop Type (Optional)</label>
+              <input type="text" class="form-control" id="diseaseCropHint" placeholder="e.g. Maize, Tomatoes, Irish Potatoes, French Beans">
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" id="diseaseScanBtn" onclick="runDiseaseScan()" disabled>
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <span>Diagnose Crop with Gemma</span>
+            </button>
+          </div>
+
+          <div>
+            <!-- Empty State Prompt Before Scan -->
+            <div class="card" id="diseaseEmptyPrompt" style="text-align: center; padding: 3rem 1.5rem; color: var(--text-muted);">
+              <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--bg-card-subtle); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; color: var(--primary);">
+                <svg class="icon" style="width:28px; height:28px;" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16 3 3"/></svg>
+              </div>
+              <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.4rem;">Gemma Plant Pathologist Ready</h4>
+              <p style="font-size: 0.88rem; max-width: 340px; margin: 0 auto; line-height: 1.5;">
+                Upload a clear photo of crop leaves, stem, or fruit on the left. Google Gemma will diagnose pathogens, assess severity, and prescribe verified Kenyan treatments.
+              </p>
+            </div>
+
+            <!-- Diagnosis Result Card -->
+            <div class="card result-box" id="diseaseResultCard">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
+                <div>
+                  <span class="result-badge danger" id="resultConfidenceBadge">High Confidence</span>
+                  <h2 style="font-size: 1.4rem; font-weight: 800;" id="resultDiagnosis">Diagnosed Condition</h2>
+                  <div style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 0.75rem;" id="resultCrop">Crop: Maize</div>
+                </div>
+
+                <!-- Voice Audio Controls (Read Aloud & Stop Speaking) -->
+                <div class="audio-control-group">
+                  <button class="btn btn-secondary" id="ttsSpeakBtn" onclick="speakDiagnosis()">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                    <span>Read Aloud</span>
+                  </button>
+                  <button class="btn btn-secondary danger-outline" id="ttsStopBtn" onclick="stopSpeech()" style="display: none;">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                    <span>Stop Speaking</span>
+                  </button>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 1rem;">
+                <h4 style="font-size: 0.88rem; font-weight: 700; margin-bottom: 0.3rem;">Visual Symptoms</h4>
+                <p id="resultSymptoms" style="font-size: 0.92rem;"></p>
+              </div>
+
+              <div style="margin-bottom: 1rem;">
+                <h4 style="font-size: 0.88rem; font-weight: 700; margin-bottom: 0.3rem; color: #166534;">Organic & Cultural Remedies</h4>
+                <p id="resultOrganic" style="font-size: 0.92rem; background: #f0fdf4; padding: 0.65rem; border-radius: var(--radius-sm); border-left: 3px solid #16a34a;"></p>
+              </div>
+
+              <div style="margin-bottom: 1rem;">
+                <h4 style="font-size: 0.88rem; font-weight: 700; margin-bottom: 0.3rem; color: #1e40af;">Agrovet Chemical Remedies (Kenya Approved)</h4>
+                <p id="resultChemical" style="font-size: 0.92rem; background: #eff6ff; padding: 0.65rem; border-radius: var(--radius-sm); border-left: 3px solid #2563eb;"></p>
+              </div>
+
+              <div style="margin-bottom: 1rem;">
+                <h4 style="font-size: 0.88rem; font-weight: 700; margin-bottom: 0.3rem;">Prevention for Next Season</h4>
+                <p id="resultPrevention" style="font-size: 0.92rem;"></p>
+              </div>
+
+              <div style="font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 0.5rem;" id="resultCloudStorageMeta">
+                Storage: DigitalOcean Spaces
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. RECEIPT SCANNER PANEL -->
+      <section class="tab-panel" id="panelReceipts">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-8"/><path d="M16 12h-8"/><path d="M14 16h-6"/></svg>
+                Scan Agrovet Expense Receipt
+              </h3>
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+              Snap a paper receipt of fertilizer, seed, spray, or equipment. Gemma OCR extracts line items and total cost for your farm ledger.
+            </p>
+
+            <div class="upload-zone" id="receiptDropzone" onclick="document.getElementById('receiptFileInput').click()">
+              <div class="upload-icon-circle">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div class="upload-text">Click or drag & drop paper receipt</div>
+              <div class="upload-hint">Saves directly to DigitalOcean Spaces object storage</div>
+              <input type="file" id="receiptFileInput" accept="image/*" style="display:none" onchange="previewReceiptImage(event)">
+            </div>
+
+            <div class="image-preview-container" id="receiptPreviewBox">
+              <img id="receiptPreviewImg" src="" alt="Receipt Preview">
+              <button class="preview-clear-btn" onclick="clearReceiptPreview(event)">✕</button>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" id="receiptScanBtn" onclick="runReceiptScan()" disabled>
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span>Audit & Extract Receipt with Gemma</span>
+            </button>
+          </div>
+
+          <!-- Receipt Confirmation Card -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                Scanned Expense Verification
+              </h3>
+            </div>
+            <div id="receiptResultBox">
+              <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+                <svg class="icon icon-xl" style="opacity: 0.3; margin-bottom: 0.5rem;" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                <p>Upload a receipt to audit expenses before adding to your ledger.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. DIGITAL LEDGER PANEL -->
+      <section class="tab-panel" id="panelLedger">
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              Farm Financial Ledger
+            </h3>
+            <div style="display: flex; gap: 0.5rem;">
+              <select class="form-control" style="width: auto; padding: 0.35rem 0.75rem;" id="ledgerFilterType" onchange="loadLedgerTransactions()">
+                <option value="">All Transactions</option>
+                <option value="income">Sales / Incomes Only</option>
+                <option value="expense">Expenses Only</option>
+              </select>
+              <button class="btn btn-secondary" onclick="loadLedgerTransactions()">
+                <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          <div class="data-table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Category</th>
+                  <th>Item / Commodity</th>
+                  <th>Qty</th>
+                  <th>Unit Price (KES)</th>
+                  <th>Total (KES)</th>
+                  <th>Counterparty</th>
+                  <th>Proof</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="ledgerTableBody">
+                <tr>
+                  <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading transactions...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. KENYA MARKET PRICES PANEL -->
+      <section class="tab-panel" id="panelMarket">
+        <!-- Gemma AI Market Intelligence Section -->
+        <div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--accent);">
+          <div class="card-header">
+            <h3 class="card-title" style="display: flex; align-items: center; gap: 0.5rem;">
+              <svg class="icon" style="color: var(--accent);" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Gemma AI Market Intelligence & Arbitrage Advisory
+            </h3>
+            <span class="badge-pill">Gemma 4-26B</span>
+          </div>
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Consult Google Gemma to analyze wholesale price spreads across Nairobi Wakulima, Mombasa Kongowea, and regional hubs to maximize your farmgate profits.
+          </p>
+          <div class="grid-3" style="gap: 0.75rem; align-items: flex-end;">
+            <div class="form-group">
+              <label class="form-label" for="marketAiCommodity">Commodity</label>
+              <select class="form-control" id="marketAiCommodity">
+                <option value="Dry Maize">Dry Maize (90kg bag)</option>
+                <option value="Irish Potatoes">Irish Potatoes (50kg bag)</option>
+                <option value="Tomatoes">Tomatoes (64kg wooden crate)</option>
+                <option value="Dry Beans (Rosecoco)">Dry Beans (90kg bag)</option>
+                <option value="Red Onions">Red Onions (13kg net)</option>
+                <option value="Cabbages">Cabbages (100kg bag)</option>
+                <option value="Hass Avocados">Hass Avocados (4kg carton)</option>
+                <option value="Fresh Raw Milk">Fresh Raw Milk (Liter)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="marketAiCounty">Farm Location</label>
+              <select class="form-control" id="marketAiCounty"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="marketAiQuestion">Specific Question (Optional)</label>
+              <input type="text" class="form-control" id="marketAiQuestion" placeholder="e.g. Should I sell now in Nakuru or transport to Nairobi Wakulima?">
+            </div>
+          </div>
+          <div style="margin-top: 0.75rem;">
+            <button class="btn btn-primary" id="marketAiAnalyzeBtn" onclick="runMarketAiAdvisory()">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+              <span>Analyze Market Strategy with Gemma</span>
+            </button>
+          </div>
+
+          <div id="marketAiResultBox" style="display: none; margin-top: 1.25rem;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom: 1.5rem;">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg class="icon" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+                Trader Deal Evaluator
+              </h3>
+            </div>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
+              Offered a price by a broker? Compare it against wholesale market benchmarks to avoid selling at a loss.
+            </p>
+            <div class="grid-2" style="gap: 0.75rem;">
+              <div class="form-group">
+                <label class="form-label">Commodity</label>
+                <select class="form-control" id="compareCommodity">
+                  <option value="Maize (Dry)">Dry Maize</option>
+                  <option value="Irish Potatoes">Irish Potatoes</option>
+                  <option value="Tomatoes">Tomatoes</option>
+                  <option value="Dry Beans (Rosecoco/Nyayo)">Dry Beans</option>
+                  <option value="Red Onions">Red Onions</option>
+                  <option value="Cabbages">Cabbages</option>
+                  <option value="Hass Avocados">Hass Avocados</option>
+                  <option value="Fresh Raw Milk">Fresh Milk</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Unit Offered</label>
+                <input type="text" class="form-control" id="compareUnit" value="90kg bag">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Offered Price per Unit (KES)</label>
+              <input type="number" class="form-control" id="comparePrice" placeholder="e.g. 3400">
+            </div>
+            <button class="btn btn-primary" style="width: 100%;" onclick="runPriceCompare()">
+              Evaluate Offer vs Market Average
+            </button>
+            <div id="compareResultBox" style="margin-top: 1rem; display: none;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg class="icon" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                Benchmark Wholesale Hubs
+              </h3>
+            </div>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
+              Verified pricing across Nairobi Wakulima, Mombasa Kongowea, Nakuru, Eldoret, and Kisumu Jubilee.
+            </p>
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+              <input type="text" class="form-control" id="marketSearchInput" placeholder="Filter by commodity name (e.g. Maize, Potatoes)" oninput="filterMarketPrices()">
+            </div>
+            <div class="data-table-container" style="max-height: 280px; overflow-y: auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Commodity</th>
+                    <th>Market Hub</th>
+                    <th>Unit</th>
+                    <th>Price Range (KES)</th>
+                    <th>Average (KES)</th>
+                  </tr>
+                </thead>
+                <tbody id="marketTableBody">
+                  <tr><td colspan="5" style="text-align: center;">Loading market benchmarks...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. MY PROFILE & FARM SETTINGS PANEL (DEDICATED VIEW) -->
+      <section class="tab-panel" id="panelProfile">
+        <div class="profile-hero-card">
+          <div class="profile-hero-content">
+            <div class="profile-avatar-wrapper">
+              <div class="avatar avatar-xl" id="profilePageAvatar">
+                <span id="profileAvatarInitial">M</span>
+                <img id="profileAvatarImg" src="" alt="Profile Photo" style="display:none;" />
+              </div>
+              <label class="avatar-upload-badge" for="profilePhotoUpload" title="Upload new profile picture">
+                <svg class="icon icon-xs" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <input type="file" id="profilePhotoUpload" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
+              </label>
+            </div>
+            <div>
+              <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 0.2rem;" id="profileHeroName">David Kipkorir Koech</h2>
+              <div style="font-size: 0.9rem; opacity: 0.9;" id="profileHeroLocation">Nakuru County · Rongai Sub-County</div>
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                <span class="trust-badge-pill" id="profileHeroTrustPill">Trust Index: --</span>
+                <span class="trust-badge-pill" id="profileHeroSaccoPill">SACCO Member</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Farm Enterprise & Account Profile
+            </h3>
+          </div>
+          <form id="profileEditForm" onsubmit="handleProfileUpdate(event)">
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="profileEditName">Full Legal Name</label>
+                <input type="text" class="form-control" id="profileEditName" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="profileEditPhone">Mobile Phone (M-Pesa Account Key)</label>
+                <input type="tel" class="form-control" id="profileEditPhone" required>
+              </div>
+            </div>
+
+            <div class="grid-3" style="margin-top: 1rem;">
+              <div class="form-group">
+                <label class="form-label" for="profileEditCounty">County</label>
+                <select class="form-control" id="profileEditCounty"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="profileEditSubCounty">Sub-County / Ward</label>
+                <input type="text" class="form-control" id="profileEditSubCounty">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="profileEditAcreage">Acreage (Acres)</label>
+                <input type="number" step="0.25" min="0.25" class="form-control" id="profileEditAcreage">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+              <label class="form-label">Crops Cultivated</label>
+              <div class="crop-chips-grid" id="profileCropChipsContainer"></div>
+              <input type="text" class="form-control" id="profileCustomCropInput" placeholder="+ Add another crop and press Enter" style="margin-top: 0.5rem;" onkeydown="handleProfileCustomCropKeydown(event)">
+            </div>
+
+            <div class="form-section-title" style="margin-top: 1.5rem;">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+              <span>SACCO or Cooperative Affiliation</span>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="profileEditSaccoName">SACCO / Cooperative Name</label>
+                <input type="text" class="form-control" id="profileEditSaccoName" placeholder="e.g. Murata Farm SACCO">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="profileEditSaccoId">Member Number / Account ID</label>
+                <input type="text" class="form-control" id="profileEditSaccoId" placeholder="e.g. SACCO-44910">
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; flex-wrap: wrap; gap: 1rem;">
+              <button type="button" class="btn btn-secondary danger-outline" onclick="signOutFarmer()">
+                <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                <span>Sign Out of KilimoGuard</span>
+              </button>
+              <button type="submit" class="btn btn-primary" id="saveProfileBtn">
+                <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span>Save Profile Changes</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- FLOATING VOICE & SALES ASSISTANT WIDGET (Bottom-Right FAB) -->
+  <div class="floating-chat-container" id="floatingChatContainer">
+    <!-- Trigger FAB Button -->
+    <button class="floating-chat-fab" id="floatingChatFab" onclick="toggleFloatingChat()" title="Kilimo AI Copilot (Voice & Sales)">
+      <div class="fab-pulse"></div>
+      <svg class="icon fab-chat-icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span class="fab-badge">AI</span>
+    </button>
+
+    <!-- Floating Assistant Window -->
+    <div class="floating-chat-window" id="floatingChatWindow">
+      <div class="floating-chat-header">
+        <div style="display:flex; align-items:center; gap:0.55rem;">
+          <div class="copilot-avatar">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+          </div>
+          <div>
+            <div style="font-weight:700; font-size:0.92rem; line-height:1.2;">Kilimo Copilot</div>
+            <div style="font-size:0.72rem; color:var(--text-muted); display:flex; align-items:center; gap:0.3rem;">
+              <span class="pulse-dot"></span>
+              <span>Gemma Active · Voice Ready</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.35rem;">
+          <button class="chat-ctrl-btn" onclick="clearChatHistory()" title="Clear Chat">
+            <svg class="icon icon-xs" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          </button>
+          <button class="chat-ctrl-btn" onclick="toggleFloatingChat()" title="Minimize">
+            <svg class="icon icon-xs" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages Thread -->
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-bubble bot">
+          Jambo mkulima. I am your KilimoGuard copilot. Talk to me in <strong>English</strong>, <strong>Kiswahili</strong>, or <strong>Sheng</strong>.<br><br>
+          • Speak or type: <em>"Nimeuza gunia 10 za viazi kwa 3,500 kila moja"</em><br>
+          • Or: <em>"Sold 25 crates of tomatoes at 4,800 to Nairobi trader"</em>
+        </div>
+      </div>
+
+      <!-- Voice Review Hint Banner -->
+      <div class="voice-review-hint" id="voiceReviewHint" style="display:none;">
+        Voice recorded. Review or edit text below, then press Enter or click Send.
+      </div>
+
+      <!-- Chat Input Bar -->
+      <div class="chat-input-bar">
+        <button class="voice-mic-btn" id="voiceMicBtn" onclick="toggleVoiceInput()" title="Click to speak (English or Swahili)">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+        </button>
+        <input type="text" class="chat-input" id="chatTextInput" placeholder="Type or click mic to talk..." onkeypress="handleChatKeyPress(event)">
+        <button class="btn btn-primary chat-send-btn" onclick="sendChatMessage()" id="chatSendBtn" title="Send message">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Register New Crop Plot -->
+  <div class="modal-overlay" id="newPlotModal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/></svg>
+          Register New Farm Plot / Crop Batch
+        </h3>
+        <button class="modal-close-btn" onclick="closeNewPlotModal()">✕</button>
+      </div>
+      <form id="newPlotForm" onsubmit="handleCreatePlotSubmit(event)">
+        <div class="form-group">
+          <label class="form-label" for="plotName">Plot Name / Identifier</label>
+          <input type="text" class="form-control" id="plotName" required placeholder="e.g. North Shamba - Maize Plot A">
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label" for="plotCrop">Crop</label>
+            <input type="text" class="form-control" id="plotCrop" required placeholder="e.g. Maize, Potatoes, Tomatoes">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="plotVariety">Seed Variety (Optional)</label>
+            <input type="text" class="form-control" id="plotVariety" placeholder="e.g. DK 777, Shangi, Anna F1">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label" for="plotAcreage">Plot Size (Acres)</label>
+            <input type="number" step="0.25" min="0.25" class="form-control" id="plotAcreage" required value="1.0">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="plotPlantingDate">Planting Date</label>
+            <input type="date" class="form-control" id="plotPlantingDate" required>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeNewPlotModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Plot to Shamba Tracker</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
