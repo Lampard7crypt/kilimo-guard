@@ -1,0 +1,46 @@
+name: kilimo-guard
+region: nyc
+services:
+  - name: web
+    environment_slug: python
+    build_command: pip install --no-cache-dir -r requirements.txt
+    run_command: uvicorn app.main:app --host 0.0.0.0 --port 8080
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    source_dir: /
+    routes:
+      - path: /
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 10
+      period_seconds: 15
+      timeout_seconds: 5
+      failure_threshold: 3
+    envs:
+      - key: GEMINI_API_KEY
+        type: SECRET
+        description: "Google Gemini API Key for Gemma inference"
+      - key: GEMMA_MODELS
+        value: "gemma-4-26b-a4b-it,gemma-4-31b-it"
+      - key: DATABASE_URL
+        value: "${kilimo-guard-db.DATABASE_URL}"
+      - key: DO_SPACES_KEY
+        type: SECRET
+        description: "DigitalOcean Spaces Access Key"
+      - key: DO_SPACES_SECRET
+        type: SECRET
+        description: "DigitalOcean Spaces Secret Key"
+      - key: DO_SPACES_BUCKET
+        value: "kilimo-guard-storage"
+      - key: DO_SPACES_REGION
+        value: "nyc3"
+      - key: DO_SPACES_ENDPOINT
+        value: "https://nyc3.digitaloceanspaces.com"
+
+databases:
+  - name: kilimo-guard-db
+    engine: PG
+    version: "16"
+    production: false
+    cluster_name: kilimo-guard-db-cluster

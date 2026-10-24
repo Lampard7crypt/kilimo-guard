@@ -1,0 +1,95 @@
+def test_farmer_profile_create_and_fetch(client):
+    # Register a new farmer
+    payload = {
+        "name": "Wanjiku Kamau",
+        "phone": "0799887766",
+        "county": "Uasin Gishu",
+        "primary_crop": "Wheat",
+    }
+    create_res = client.post("/api/farmer/profile", json=payload)
+    assert create_res.status_code == 200
+    farmer_data = create_res.json()
+    assert farmer_data["id"] > 0
+    assert farmer_data["name"] == "Wanjiku Kamau"
+    assert farmer_data["county"] == "Uasin Gishu"
+
+    # Fetch profile snapshot
+    fetch_res = client.get(f"/api/farmer/{farmer_data['id']}")
+    assert fetch_res.status_code == 200
+    snapshot = fetch_res.json()
+    assert snapshot["name"] == "Wanjiku Kamau"
+    assert snapshot["financial_summary"]["total_income_kes"] == 0
+    assert snapshot["financial_summary"]["total_expense_kes"] == 0
+
+
+def test_ledger_transactions_and_summary(client):
+    # 1. Register farmer
+    farmer_res = client.post(
+        "/api/farmer/profile",
+        json={"name": "Kipchoge", "phone": "0711223344", "county": "Nandi", "primary_crop": "Tea"},
+    )
+    farmer_id = farmer_res.json()["id"]
+
+    # 2. Add an income transaction (Crop Sale)
+    sale_payload = {
+        "farmer_id": farmer_id,
+        "transaction_type": "income",
+        "category": "Crop Sale",
+        "commodity": "Maize (Dry)",
+        "quantity": 10,
+        "unit": "90kg bag",
+        "unit_price": 3500.0,
+        "total_amount": 35000.0,
+        "counterparty": "Wakulima Wholesaler",
+        "notes": "Delivered to Eldoret",
+    }
+    income_res = client.post("/api/ledger/accept", json=sale_payload)
+    assert income_res.status_code == 200
+    income_tx = income_res.json()["transaction"]
+    assert income_tx["total_amount"] == 35000.0
+    sale_id = income_tx["id"]
+
+    # 3. Add an expense transaction (Agrovet Purchase)
+    expense_payload = {
+        "farmer_id": farmer_id,
+        "transaction_type": "expense",
+        "category": "Fertilizer",
+        "commodity": "DAP Fertilizer (50kg)",
+        "quantity": 2,
+        "unit": "bags",
+        "unit_price": 4500.0,
+        "total_amount": 9000.0,
+        "counterparty": "Kenya Seed Agrovet",
+        "notes": "Planting fertilizer",
+    }
+    expense_res = client.post("/api/ledger/accept", json=expense_payload)
+    assert expense_res.status_code == 200
+    expense_tx = expense_res.json()["transaction"]
+    assert expense_tx["total_amount"] == 9000.0
+    expense_id = expense_tx["id"]
+
+    # 4. Fetch summary
+    summary_res = client.get(f"/api/ledger/summary?farmer_id={farmer_id}")
+    assert summary_res.status_code == 200
+    summary = summary_res.json()
+    assert summary["total_income_kes"] == 35000.0
+    assert summary["total_expense_kes"] == 9000.0
+    assert summary["net_profit_kes"] == 26000.0
+    assert summary["total_transactions"] == 2
+    assert "Fertilizer" in summary["expense_breakdown"]
+
+    # 5. Filter transactions by type
+    filtered_res = client.get(f"/api/ledger/transactions?farmer_id={farmer_id}&transaction_type=income")
+    assert filtered_res.status_code == 200
+    txs = filtered_res.json()
+    assert len(txs) == 1
+    assert txs[0]["commodity"] == "Maize (Dry)"
+
+    # 6. Delete a transaction
+    del_res = client.delete(f"/api/ledger/transaction/{expense_id}")
+    assert del_res.status_code == 200
+
+    # Verify updated summary
+    summary_after_del = client.get(f"/api/ledger/summary?farmer_id={farmer_id}").json()
+    assert summary_after_del["total_expense_kes"] == 0.0
+    assert summary_after_del["net_profit_kes"] == 35000.0

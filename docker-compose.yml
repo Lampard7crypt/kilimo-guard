@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  web:
+    build: .
+    container_name: kilimoguard-web
+    ports:
+      - "8000:8080"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMMA_MODELS=${GEMMA_MODELS:-gemma-4-26b-a4b-it,gemma-4-31b-it}
+      - DATABASE_URL=postgresql://kilimo_user:kilimo_password@db:5432/kilimoguard_db
+      - DO_SPACES_KEY=${DO_SPACES_KEY}
+      - DO_SPACES_SECRET=${DO_SPACES_SECRET}
+      - DO_SPACES_BUCKET=${DO_SPACES_BUCKET:-kilimo-guard-storage}
+      - DO_SPACES_REGION=${DO_SPACES_REGION:-nyc3}
+      - DO_SPACES_ENDPOINT=${DO_SPACES_ENDPOINT:-https://nyc3.digitaloceanspaces.com}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+
+  db:
+    image: postgres:16-alpine
+    container_name: kilimoguard-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: kilimo_user
+      POSTGRES_PASSWORD: kilimo_password
+      POSTGRES_DB: kilimoguard_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kilimo_user -d kilimoguard_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
