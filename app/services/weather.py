@@ -69,65 +69,92 @@ def get_seasonal_climate_outlook(county: str = "Nakuru") -> Dict[str, Any]:
 
     # Determine seasonal cycle
     if month in (3, 4, 5):
-        season_title = "Long Rains (MAM) Main Cropping Cycle"
-        season_phase = "Active Vegetative & Reproductive Phase"
-        soil_moisture = "82% (High Saturation)"
-        climate_risk = "Moderate (Waterlogging in heavy clay soils)"
+        season_title = "Long Rains (MAM) Cropping Season"
+        season_phase = "Main planting and active vegetative growth phase"
+        soil_moisture_num = 82
+        climate_risk = "Good (Low drought risk, monitor for waterlogging)"
     elif month in (6, 7, 8):
-        season_title = "Post-Rains Cool & Maturation Season"
-        season_phase = "Grain Filling, Maturation & Solar Weeding"
-        soil_moisture = "64% (Adequate Subsoil Moisture)"
-        climate_risk = "Low Risk (Favorable grain drying)"
+        season_title = "Post-Rains Cool & Sunny Season"
+        season_phase = "Grain filling, crop maturation and weeding window"
+        soil_moisture_num = 64
+        climate_risk = "Low Risk (Favorable grain drying and maturation)"
     elif month in (9, 10, 11, 12):
         season_title = "Short Rains (OND) Cropping Season"
-        season_phase = "Legumes, Horticultural & Short-Cycle Grain Window"
-        soil_moisture = "74% (Optimal Field Capacity)"
-        climate_risk = "Low Risk (Reliable precipitation across Rift & Central)"
+        season_phase = "Second cropping season for legumes, potatoes, and horticulture"
+        soil_moisture_num = 74
+        climate_risk = "Low Risk (Reliable precipitation across agricultural zones)"
     else:
         season_title = "Warm Dry & Land Preparation Season"
-        season_phase = "Harvesting, Threshing & Pre-Season Land Tillage"
-        soil_moisture = "48% (Depleting Surface Moisture)"
-        climate_risk = "Elevated Moisture Stress (Irrigation advised for horticulture)"
+        season_phase = "Harvesting, threshing, and pre-season shamba tillage"
+        soil_moisture_num = 48
+        climate_risk = "Dry Spells (Irrigation advised for vegetable crops)"
 
     # Build next 3 months projections
     next_months = []
+    is_rainy = lambda m_idx: (m_idx + 1) in (3, 4, 5, 10, 11, 12)
+
     for offset in range(1, 4):
         next_m_idx = (month - 1 + offset) % 12
         m_name = month_names[next_m_idx]
         year = today.year + ((month - 1 + offset) // 12)
 
         if next_m_idx in (2, 3, 4):  # MAM
-            rainfall = "160 - 240 mm (High)"
+            rainfall = "160 - 240 mm (Good Rains)"
+            condition = "Rainy"
             temp_range = "14°C - 24°C"
             task = "Planting, basal fertilizer application (DAP/NPK), and first weeding at 2-3 weeks."
         elif next_m_idx in (5, 6, 7):  # JJA
-            rainfall = "40 - 75 mm (Low-Moderate)"
+            rainfall = "40 - 75 mm (Mild Showers & Sun)"
+            condition = "Mild / Sunny"
             temp_range = "11°C - 22°C"
             task = "Top-dressing with CAN, fungal scouting in cool mornings, and inter-row weeding."
         elif next_m_idx in (8, 9, 10, 11):  # SOND
-            rainfall = "110 - 180 mm (Moderate)"
+            rainfall = "110 - 180 mm (Seasonal Rains)"
+            condition = "Rains"
             temp_range = "13°C - 25°C"
             task = "Second crop planting (beans/potatoes), foliar booster sprays, and insect pest trapping."
         else:  # JF
-            rainfall = "15 - 35 mm (Dry)"
+            rainfall = "15 - 35 mm (Dry & Sunny)"
+            condition = "Sunny"
             temp_range = "15°C - 28°C"
             task = "Deep plowing, farmyard manure incorporation, and acquiring certified hybrid seed."
 
         next_months.append({
             "month": f"{m_name} {year}",
+            "month_name": m_name,
+            "condition": condition,
             "rainfall_expectation": rainfall,
             "temp_range": temp_range,
             "field_activity": task,
         })
 
+    # Clear farmer-friendly forecast sentence (e.g. "There will be rains in November followed by sun in December")
+    m1 = next_months[0]
+    m2 = next_months[1]
+    m3 = next_months[2]
+
+    if is_rainy((month) % 12) and not is_rainy((month + 1) % 12):
+        simple_summary = f"There will be rains in the following month ({m1['month_name']}), followed by sunny, drier weather in {m2['month_name']}."
+    elif not is_rainy((month) % 12) and is_rainy((month + 1) % 12):
+        simple_summary = f"Mostly dry and sunny in {m1['month_name']}, followed by the onset of seasonal rains in {m2['month_name']}."
+    elif is_rainy((month) % 12) and is_rainy((month + 1) % 12):
+        simple_summary = f"Expect healthy rains in {m1['month_name']} continuing through {m2['month_name']}, then sunny drying weather in {m3['month_name']}."
+    else:
+        simple_summary = f"Mostly sunny and dry weather in {m1['month_name']} and {m2['month_name']}, perfect for harvesting and solar grain drying."
+
+    soil_moisture_text = f"{soil_moisture_num}% (Good: soil has healthy moisture for seeds and roots)" if soil_moisture_num >= 60 else f"{soil_moisture_num}% (Dry: surface is drying out, watering recommended)"
+
     return {
         "season_title": season_title,
         "season_phase": season_phase,
-        "soil_moisture": soil_moisture,
+        "simple_forecast_summary": simple_summary,
+        "soil_moisture": soil_moisture_text,
+        "soil_moisture_percent": soil_moisture_num,
         "climate_risk": climate_risk,
         "projection_window": f"{next_months[0]['month']} to {next_months[-1]['month']}",
         "months": next_months,
     }
+
 
 
 def get_county_weather(county: str = "Nakuru") -> Dict[str, Any]:

@@ -19,12 +19,22 @@ log = logging.getLogger("kilimoguard")
 # Initialize database schema
 Base.metadata.create_all(bind=engine)
 
+# Safe SQLite migration for newly added columns
+try:
+    with engine.connect() as conn:
+        from sqlalchemy import text
+        conn.execute(text("ALTER TABLE farmers ADD COLUMN avatar_url VARCHAR(500)"))
+        conn.commit()
+except Exception:
+    pass
+
 # Seed initial Kenyan market prices
 try:
     with SessionLocal() as db_session:
         seed_market_prices(db_session)
 except Exception as e:
     log.warning("Could not pre-seed market prices on startup: %s", e)
+
 
 app = FastAPI(
     title="KilimoGuard API",
