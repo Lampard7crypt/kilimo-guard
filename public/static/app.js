@@ -158,32 +158,51 @@ function handleSaccoSelectChange(select) {
   }
 }
 
-// Counties Loader
+const KENYA_COUNTIES = [
+  "Baringo", "Bomet", "Bungoma", "Busia", "Elgeyo-Marakwet", "Embu", "Garissa",
+  "Homa Bay", "Isiolo", "Kajiado", "Kakamega", "Kericho", "Kiambu", "Kilifi",
+  "Kirinyaga", "Kisii", "Kisumu", "Kitui", "Kwale", "Laikipia", "Lamu", "Machakos",
+  "Makueni", "Mandera", "Marsabit", "Meru", "Migori", "Mombasa", "Murang'a",
+  "Nairobi", "Nakuru", "Nandi", "Narok", "Nyamira", "Nyandarua", "Nyeri",
+  "Samburu", "Siaya", "Taita-Taveta", "Tana River", "Tharaka-Nithi", "Trans Nzoia",
+  "Turkana", "Uasin Gishu", "Vihiga", "Wajir", "West Pokot"
+];
+
+// Counties Loader with Bundled Offline/GitHub Pages Fallback
 async function loadCounties() {
+  let counties = KENYA_COUNTIES;
   try {
     const res = await fetch("/api/counties");
-    const counties = await res.json();
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        counties = data;
+      }
+    }
+  } catch (err) {
+    console.warn("Using bundled Kenya counties fallback:", err);
+  }
 
-    const signupSelect = document.getElementById("signupCounty");
-    const profileSelect = document.getElementById("profileEditCounty");
-    const marketAiCounty = document.getElementById("marketAiCounty");
+  const signupSelect = document.getElementById("signupCounty");
+  const profileSelect = document.getElementById("profileEditCounty");
+  const marketAiCounty = document.getElementById("marketAiCounty");
 
-    [signupSelect, profileSelect, marketAiCounty].forEach((select) => {
-      if (!select) return;
-      select.innerHTML = "";
+  [signupSelect, profileSelect, marketAiCounty].forEach((select) => {
+    if (!select) return;
+    const currentVal = select.value || "Nakuru";
+    if (select.children.length === 0) {
       counties.forEach((c) => {
         const opt = document.createElement("option");
         opt.value = c;
         opt.innerText = c;
+        if (c === currentVal) opt.selected = true;
         select.appendChild(opt);
       });
-    });
-
-    if (signupSelect) signupSelect.value = "Nakuru";
-    if (marketAiCounty) marketAiCounty.value = "Nakuru";
-  } catch (err) {
-    console.error("Failed loading counties:", err);
-  }
+    }
+    if (!select.value || select.value === "") {
+      select.value = counties.includes(currentVal) ? currentVal : "Nakuru";
+    }
+  });
 }
 
 // Initialize Farmer Profile State
@@ -302,12 +321,34 @@ async function handleSignupSubmit(e) {
       loadMarketPrices();
       loadCropBatches();
       runGenerateTrustIndex();
+    } else if (res.status === 404) {
+      // Fallback for static GitHub Pages deployment without Python API
+      currentFarmer = {
+        id: Date.now(),
+        ...payload,
+        avatar_url: null,
+      };
+      localStorage.setItem("kilimoguard_farmer", JSON.stringify(currentFarmer));
+      showAppView();
+      updateFarmerUI();
+      loadDashboardData();
+      loadMarketPrices();
     } else {
-      const err = await res.json();
+      const err = await res.json().catch(() => ({}));
       alert("Registration failed: " + (err.detail || "Check input details."));
     }
   } catch (err) {
-    alert("Network error: " + err.message);
+    // Offline / static GitHub Pages network fallback
+    currentFarmer = {
+      id: Date.now(),
+      ...payload,
+      avatar_url: null,
+    };
+    localStorage.setItem("kilimoguard_farmer", JSON.stringify(currentFarmer));
+    showAppView();
+    updateFarmerUI();
+    loadDashboardData();
+    loadMarketPrices();
   }
 }
 
